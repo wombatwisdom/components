@@ -183,6 +183,28 @@ tasks:
     cmds:
       - task status
 
+  # Component Generation
+  generate:component:
+    desc: Generate a new component from templates
+    cmds:
+      - go run scripts/generate-component.go {{.CLI_ARGS}}
+
+  # Advanced Testing
+  test:full:
+    desc: Run comprehensive test suite
+    cmds:
+      - ./scripts/test-runner.sh --ci
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - ./scripts/test-runner.sh --integration
+
+  test:benchmark:
+    desc: Run benchmark tests
+    cmds:
+      - ./scripts/test-runner.sh --benchmark
+
   # Tools Installation
   tools:install:
     desc: Install development tools
