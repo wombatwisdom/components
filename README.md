@@ -28,7 +28,7 @@ task status
 
 - **System-first Architecture**: Shared connection management across components
 - **Benthos Compatible**: Designed to integrate seamlessly with Benthos pipelines
-- **Modern Go**: Uses Go 1.21+ features including `iter.Seq2` for metadata
+- **Modern Go**: Uses Go 1.24+ features including `iter.Seq2` for metadata
 - **Comprehensive Testing**: 30+ tests with Ginkgo v2 and Gomega
 - **Developer Experience**: Component generators, CI/CD, and automation tools
 - **Production Ready**: Includes monitoring, logging, and error handling
