@@ -6,7 +6,6 @@ import (
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/wombatwisdom/components/spec"
-	"io"
 	"sync"
 	"time"
 )
@@ -21,18 +20,11 @@ type SinkConfig struct {
 }
 
 func NewSink(env spec.Environment, config SinkConfig) (*Sink, error) {
-	var err error
-	topic, err := env.NewDynamicField(config.TopicExpr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse topic expression: %w", err)
-	}
+	topic := env.NewDynamicField(config.TopicExpr)
 
 	var retained spec.DynamicField
 	if config.RetainedExpr != "" {
-		retained, err = env.NewDynamicField(config.RetainedExpr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse retained expression: %w", err)
-		}
+		retained = env.NewDynamicField(config.RetainedExpr)
 	}
 
 	return &Sink{
@@ -106,17 +98,9 @@ func (m *Sink) Write(ctx context.Context, message spec.Message) error {
 		return fmt.Errorf("topic interpolation error: %w", err)
 	}
 
-	reader, err := message.Data()
+	mb, err := message.Raw()
 	if err != nil {
 		return fmt.Errorf("failed to access message data: %w", err)
-	}
-
-	var mb []byte
-	if reader != nil {
-		mb, err = io.ReadAll(reader)
-		if err != nil {
-			return fmt.Errorf("failed to read message data: %w", err)
-		}
 	}
 
 	mtok := client.Publish(topicStr, m.config.QOS, retained, mb)

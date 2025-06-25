@@ -50,12 +50,12 @@ var _ = Describe("Roundtrip", func() {
 	AfterEach(func() {
 		src.Disconnect(context.Background())
 		snk.Disconnect(context.Background())
-		collector.Disconnect(context.Background())
+		collector.Disconnect()
 	})
 
 	When("sending a message to the sink", func() {
 		It("should receive the message on the source", func() {
-			msg := spec.NewBytesMessage([]byte("hello, world"), nil)
+			msg := spec.NewBytesMessage([]byte("hello, world"))
 
 			err := snk.Write(context.Background(), msg)
 			Expect(err).ToNot(HaveOccurred())

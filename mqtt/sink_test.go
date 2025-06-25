@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/wombatwisdom/components/mqtt"
 	"github.com/wombatwisdom/components/spec"
-	"io"
 )
 
 var _ = Describe("Sink", func() {
@@ -33,10 +32,8 @@ var _ = Describe("Sink", func() {
 
 	When("sending a message using the sink", func() {
 		It("should put the message on the MQTT server", func() {
-			msg := spec.NewBytesMessage([]byte("hello, world"), nil)
-			r, err := msg.Data()
-			Expect(err).ToNot(HaveOccurred())
-			b, err := io.ReadAll(r)
+			msg := spec.NewBytesMessage([]byte("hello, world"))
+			b, err := msg.Raw()
 			Expect(err).ToNot(HaveOccurred())
 
 			recv := make(chan mqtt2.Message)

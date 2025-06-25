@@ -10,19 +10,16 @@ import (
 )
 
 var _ = Describe("System", func() {
-    When("an invalid configuration is provided", func() {
+    When("an invalid configuration format is provided", func() {
         It("should return an error", func() {
             config := spec.NewYamlConfig(`
-servers: ##url##
+invalid yaml: [
 auth:
   jwt: ##jwt##
   seed: ##seed##
-`,
-                "##url##", srv.ClientURL(),
-                "##jwt##", "invalid_seed",
-                "##seed##", "invalid_jwt")
+`)
 
-            system, err := core.NewSystem(config)
+            system, err := core.NewSystemFromConfig(config)
             Expect(err).To(HaveOccurred())
             Expect(system).To(BeNil())
         })
@@ -40,7 +37,7 @@ auth:
                 "##jwt##", "invalid_seed",
                 "##seed##", "invalid_jwt")
 
-            system, err := core.NewSystem(config)
+            system, err := core.NewSystemFromConfig(config)
             Expect(err).ToNot(HaveOccurred())
             Expect(system).ToNot(BeNil())
 
@@ -59,7 +56,7 @@ auth:
   seed: ##seed##
 `, "##url##", srv.ClientURL(), "##jwt##", jwt, "##seed##", string(seed))
 
-            system, err := core.NewSystem(config)
+            system, err := core.NewSystemFromConfig(config)
             Expect(err).ToNot(HaveOccurred())
             Expect(system).ToNot(BeNil())
 

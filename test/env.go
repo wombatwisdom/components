@@ -14,6 +14,18 @@ type environment struct {
 	spec.DynamicFieldFactory
 }
 
+func (e *environment) GetString(key string) string {
+	return ""
+}
+
+func (e *environment) GetInt(key string) int {
+	return 0
+}
+
+func (e *environment) GetBool(key string) bool {
+	return false
+}
+
 func TestEnvironment() spec.Environment {
 	env, err := cel.NewEnv(
 		cel.Variable("this", cel.AnyType),

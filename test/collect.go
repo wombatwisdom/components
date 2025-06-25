@@ -34,7 +34,7 @@ func (l *ListCollector) Messages() []spec.Message {
 	return l.messages
 }
 
-func (l *ListCollector) Write(ctx context.Context, message spec.Message) error {
+func (l *ListCollector) Collect(message spec.Message) error {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	l.messages = append(l.messages, message)
@@ -45,6 +45,24 @@ func (l *ListCollector) Write(ctx context.Context, message spec.Message) error {
 	return nil
 }
 
-func (l *ListCollector) Disconnect(ctx context.Context) error {
+func (l *ListCollector) Flush() (spec.Batch, error) {
+	// For testing, we don't need to return an actual batch
+	return nil, nil
+}
+
+func (l *ListCollector) Write(message spec.Message) error {
+	return l.Collect(message)
+}
+
+func (l *ListCollector) Disconnect() error {
+	return nil
+}
+
+// Legacy methods
+func (l *ListCollector) WriteOld(ctx context.Context, message spec.Message) error {
+	return l.Collect(message)
+}
+
+func (l *ListCollector) DisconnectOld(ctx context.Context) error {
 	return nil
 }
