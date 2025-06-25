@@ -15,7 +15,7 @@ require (
 	github.com/mochi-mqtt/server/v2 v2.6.6
 	github.com/nats-io/jwt/v2 v2.7.4
 	github.com/nats-io/nats-server/v2 v2.11.3
-	github.com/nats-io/nats.go v1.42.0
+	github.com/nats-io/nats.go v1.43.0
 	github.com/nats-io/nkeys v0.4.11
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.0
