@@ -125,7 +125,12 @@ tasks:
     desc: Format code
     cmds:
       - go fmt ./...
-      - goimports -w .
+      - |
+        if command -v goimports >/dev/null 2>&1; then
+          goimports -w .
+        else
+          echo "goimports not found, skipping import formatting"
+        fi
 
   vet:
     desc: Run go vet
