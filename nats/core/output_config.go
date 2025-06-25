@@ -2,8 +2,10 @@
 
 package core
 
-import "encoding/json"
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type OutputConfig struct {
 	// Optional metadata filters

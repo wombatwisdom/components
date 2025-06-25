@@ -106,3 +106,4 @@ task ci:test           # Run CI pipeline for working packages
 ## Design Memories
 
 - Keep using the core benthos engine
+- Before something is committed, the tests must succeed and no tests should be skipped. The project must build without errors and be correctly formatted and linted

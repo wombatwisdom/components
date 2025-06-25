@@ -1,26 +1,27 @@
 package core
 
 import (
-    "fmt"
-    "github.com/nats-io/nats.go"
-    "github.com/wombatwisdom/components/spec"
-    "strings"
+	"fmt"
+	"strings"
+
+	"github.com/nats-io/nats.go"
+	"github.com/wombatwisdom/components/spec"
 )
 
 const (
-    InputComponentName = "nats_core"
+	InputComponentName = "nats_core"
 )
 
 func NewInput(sys spec.System, rawConfig spec.Config) (*Input, error) {
-    var cfg InputConfig
-    if err := rawConfig.Decode(&cfg); err != nil {
-        return nil, err
-    }
+	var cfg InputConfig
+	if err := rawConfig.Decode(&cfg); err != nil {
+		return nil, err
+	}
 
-    return &Input{
-        sys: sys,
-        cfg: cfg,
-    }, nil
+	return &Input{
+		sys: sys,
+		cfg: cfg,
+	}, nil
 }
 
 // Input receives messages from a NATS subject.
@@ -30,66 +31,66 @@ func NewInput(sys spec.System, rawConfig spec.Config) (*Input, error) {
 // a new message is only fetched once the current one has been processed.
 //
 // ## Queue Groups
-// Each input with the same queue name will be load balancing messages across all members of the group. This is useful 
+// Each input with the same queue name will be load balancing messages across all members of the group. This is useful
 // when you want to scale the processing of messages across multiple instances.
 type Input struct {
-    sys spec.System
-    cfg InputConfig
+	sys spec.System
+	cfg InputConfig
 
-    sub *nats.Subscription
+	sub *nats.Subscription
 }
 
 func (i *Input) Init(ctx spec.ComponentContext) error {
-    client, ok := i.sys.Client().(*nats.Conn)
-    if !ok {
-        return fmt.Errorf("nats client is not of type *nats.Conn")
-    }
+	client, ok := i.sys.Client().(*nats.Conn)
+	if !ok {
+		return fmt.Errorf("nats client is not of type *nats.Conn")
+	}
 
-    // create the subscription
-    var err error
-    if i.cfg.Queue == nil {
-        i.sub, err = client.SubscribeSync(i.cfg.Subject)
-    } else {
-        i.sub, err = client.QueueSubscribeSync(i.cfg.Subject, *i.cfg.Queue)
-    }
-    return err
+	// create the subscription
+	var err error
+	if i.cfg.Queue == nil {
+		i.sub, err = client.SubscribeSync(i.cfg.Subject)
+	} else {
+		i.sub, err = client.QueueSubscribeSync(i.cfg.Subject, *i.cfg.Queue)
+	}
+	return err
 }
 
 func (i *Input) Close(ctx spec.ComponentContext) error {
-    if i.sub != nil {
-        if err := i.sub.Unsubscribe(); err != nil {
-            return err
-        }
-    }
+	if i.sub != nil {
+		if err := i.sub.Unsubscribe(); err != nil {
+			return err
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallback, error) {
-    msgs, err := i.sub.Fetch(i.cfg.BatchCount)
-    if err != nil {
-        return nil, nil, err
-    }
+	msgs, err := i.sub.Fetch(i.cfg.BatchCount)
+	if err != nil {
+		return nil, nil, err
+	}
 
-    batch := ctx.NewBatch()
-    for _, msg := range msgs {
-        m := ctx.NewMessage()
-        m.SetRaw(msg.Data)
+	batch := ctx.NewBatch()
+	for _, msg := range msgs {
+		m := ctx.NewMessage()
+		m.SetRaw(msg.Data)
 
-        for k, v := range msg.Header {
-            if len(v) == 1 {
-                m.SetMetadata(k, v[0])
-            } else {
-                m.SetMetadata(k, strings.Join(v, ","))
-            }
-        }
+		for k, v := range msg.Header {
+			if len(v) == 1 {
+				m.SetMetadata(k, v[0])
+			} else {
+				m.SetMetadata(k, strings.Join(v, ","))
+			}
+		}
 
-        // add message metadata as headers
-        m.SetMetadata("nats_subject", msg.Subject)
-        m.SetMetadata("nats_reply", msg.Reply)
+		// add message metadata as headers
+		m.SetMetadata("nats_subject", msg.Subject)
+		m.SetMetadata("nats_reply", msg.Reply)
 
-        batch.Append(m)
-    }
+		batch.Append(m)
+	}
 
-    return batch, spec.NoopCallback, nil
+	return batch, spec.NoopCallback, nil
 }

@@ -20,13 +20,13 @@ var _ = Describe("MessageExpressionContext", func() {
 
 	It("should create context with content as string", func() {
 		ctx := spec.MessageExpressionContext(mockMsg)
-		
+
 		Expect(ctx["content"]).To(Equal(`{"name": "test", "value": 42}`))
 	})
 
 	It("should parse JSON content", func() {
 		ctx := spec.MessageExpressionContext(mockMsg)
-		
+
 		json, ok := ctx["json"].(map[string]any)
 		Expect(ok).To(BeTrue())
 		Expect(json["name"]).To(Equal("test"))
@@ -35,7 +35,7 @@ var _ = Describe("MessageExpressionContext", func() {
 
 	It("should include metadata", func() {
 		ctx := spec.MessageExpressionContext(mockMsg)
-		
+
 		metadata, ok := ctx["metadata"].(map[string]any)
 		Expect(ok).To(BeTrue())
 		Expect(metadata["source"]).To(Equal("test"))
@@ -44,9 +44,9 @@ var _ = Describe("MessageExpressionContext", func() {
 
 	It("should handle invalid JSON gracefully", func() {
 		mockMsg.raw = []byte(`invalid json`)
-		
+
 		ctx := spec.MessageExpressionContext(mockMsg)
-		
+
 		Expect(ctx["content"]).To(Equal("invalid json"))
 		json, ok := ctx["json"].(map[string]any)
 		Expect(ok).To(BeTrue())
@@ -55,13 +55,13 @@ var _ = Describe("MessageExpressionContext", func() {
 
 	It("should handle message raw error gracefully", func() {
 		mockMsg.rawError = true
-		
+
 		ctx := spec.MessageExpressionContext(mockMsg)
-		
+
 		// Should not panic, but content and json won't be set
 		Expect(ctx["content"]).To(BeNil())
 		Expect(ctx["json"]).To(BeNil())
-		
+
 		// Metadata should still be present
 		metadata, ok := ctx["metadata"].(map[string]any)
 		Expect(ok).To(BeTrue())

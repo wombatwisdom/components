@@ -2,6 +2,7 @@ package mqtt_test
 
 import (
 	"context"
+
 	mqtt2 "github.com/eclipse/paho.mqtt.golang"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -23,11 +24,11 @@ var _ = Describe("Sink", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		snk.Connect(context.Background())
+		_ = snk.Connect(context.Background())
 	})
 
 	AfterEach(func() {
-		snk.Disconnect(context.Background())
+		_ = snk.Disconnect(context.Background())
 	})
 
 	When("sending a message using the sink", func() {

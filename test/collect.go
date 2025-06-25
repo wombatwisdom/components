@@ -2,8 +2,9 @@ package test
 
 import (
 	"context"
-	"github.com/wombatwisdom/components/spec"
 	"sync"
+
+	"github.com/wombatwisdom/components/spec"
 )
 
 func NewListCollector() *ListCollector {

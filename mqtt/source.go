@@ -2,9 +2,10 @@ package mqtt
 
 import (
 	"context"
+	"time"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/wombatwisdom/components/spec"
-	"time"
 )
 
 type SourceConfig struct {

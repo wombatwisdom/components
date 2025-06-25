@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/wombatwisdom/components/spec"
 	"sync"
 	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/wombatwisdom/components/spec"
 )
 
 type SinkConfig struct {

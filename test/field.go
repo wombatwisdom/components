@@ -2,10 +2,11 @@ package test
 
 import (
 	"fmt"
-	"github.com/google/cel-go/cel"
-	"github.com/wombatwisdom/components/spec"
 	"slices"
 	"strings"
+
+	"github.com/google/cel-go/cel"
+	"github.com/wombatwisdom/components/spec"
 )
 
 type dynamicFieldFactory struct {

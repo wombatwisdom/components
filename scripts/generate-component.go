@@ -7,17 +7,20 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type ComponentConfig struct {
-	Package              string
-	Module               string
-	SystemName           string
-	ServiceName          string
-	Description          string
-	ClientType           string
-	ConfigExample        string
-	ValidConfigExample   string
+	Package            string
+	Module             string
+	SystemName         string
+	ServiceName        string
+	Description        string
+	ClientType         string
+	ConfigExample      string
+	ValidConfigExample string
 }
 
 func main() {
@@ -28,21 +31,21 @@ func main() {
 	}
 
 	componentName := strings.ToLower(os.Args[1])
-	
+
 	// Interactive configuration
 	config := ComponentConfig{
 		Package:    componentName,
 		Module:     "github.com/wombatwisdom/components",
-		SystemName: strings.Title(componentName),
+		SystemName: cases.Title(language.English).String(componentName),
 	}
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Printf("Service name (default: %s): ", strings.Title(componentName))
+	fmt.Printf("Service name (default: %s): ", cases.Title(language.English).String(componentName))
 	if serviceName, _ := reader.ReadString('\n'); strings.TrimSpace(serviceName) != "" {
 		config.ServiceName = strings.TrimSpace(serviceName)
 	} else {
-		config.ServiceName = strings.Title(componentName)
+		config.ServiceName = cases.Title(language.English).String(componentName)
 	}
 
 	fmt.Print("Description: ")
@@ -73,7 +76,7 @@ func main() {
 	// Template files to generate
 	templates := map[string]string{
 		"system.go":      "templates/component/system.go.tmpl",
-		"input.go":       "templates/component/input.go.tmpl", 
+		"input.go":       "templates/component/input.go.tmpl",
 		"output.go":      "templates/component/output.go.tmpl",
 		"system_test.go": "templates/component/system_test.go.tmpl",
 		"Taskfile.yml":   "templates/component/Taskfile.yml.tmpl",
@@ -91,7 +94,7 @@ func main() {
 	// Generate schema files
 	schemas := []string{
 		"system_config.schema.yaml",
-		"input_config.schema.yaml", 
+		"input_config.schema.yaml",
 		"output_config.schema.yaml",
 	}
 
@@ -131,7 +134,7 @@ func generateFile(templatePath, outputPath string, config ComponentConfig) error
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return tmpl.Execute(file, config)
 }

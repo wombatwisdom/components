@@ -3,6 +3,7 @@ package mqtt_test
 import (
 	"context"
 	"fmt"
+
 	mqtt2 "github.com/eclipse/paho.mqtt.golang"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -35,8 +36,8 @@ var _ = Describe("Source", func() {
 	})
 
 	AfterEach(func() {
-		src.Disconnect(context.Background())
-		collector.Disconnect()
+		_ = src.Disconnect(context.Background())
+		_ = collector.Disconnect()
 	})
 
 	When("sending a message to MQTT", func() {

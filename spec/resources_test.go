@@ -10,9 +10,9 @@ import (
 
 var _ = Describe("ResourceManager", func() {
 	var (
-		ctx    context.Context
-		logger *mockLogger
-		rm     spec.ResourceManager
+		ctx     context.Context
+		logger  *mockLogger
+		rm      spec.ResourceManager
 		mockSys *mockSystem
 	)
 

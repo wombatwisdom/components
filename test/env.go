@@ -2,11 +2,12 @@ package test
 
 import (
 	"fmt"
+	"log/slog"
+	"net"
+
 	"github.com/google/cel-go/cel"
 	"github.com/onsi/gomega"
 	"github.com/wombatwisdom/components/spec"
-	"log/slog"
-	"net"
 )
 
 type environment struct {
@@ -52,7 +53,7 @@ func RandomPort() (int, error) {
 		slog.Default().Warn(fmt.Sprintf("Failed to listen on random port: %v", err))
 	}
 
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	port := listener.Addr().(*net.TCPAddr).Port
 	return port, nil
