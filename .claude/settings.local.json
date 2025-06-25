@@ -14,7 +14,8 @@
       "Bash(go mod:*)",
       "Bash(git commit:*)",
       "Bash(gh pr create:*)",
-      "Bash(gh pr view:*)"
+      "Bash(gh pr view:*)",
+      "Bash(go install:*)"
     ],
     "deny": []
   }
