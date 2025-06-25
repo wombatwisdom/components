@@ -12,7 +12,7 @@ require (
 	github.com/google/cel-go v0.22.1
 	github.com/google/uuid v1.6.0
 	github.com/johannesboyne/gofakes3 v0.0.0-20250106100439-5c39aecd6999
-	github.com/mochi-mqtt/server/v2 v2.6.6
+	github.com/mochi-mqtt/server/v2 v2.7.9
 	github.com/nats-io/jwt/v2 v2.7.4
 	github.com/nats-io/nats-server/v2 v2.11.3
 	github.com/nats-io/nats.go v1.42.0
