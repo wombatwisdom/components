@@ -76,16 +76,14 @@ func (s *Source) Read(ctx context.Context, collector spec.Collector) error {
 		msg := NewObjectResponseMessage(objResp)
 
 		// -- write the message
-		if err := collector.Write(ctx, msg); err != nil {
-			msg.Nack()
+		if err := collector.Write(msg); err != nil {
+			// Note: Ack/Nack are legacy methods, now handled by message implementation
 			return fmt.Errorf("failed to write message: %w", err)
 		}
-
-		msg.Ack()
 	}
 
 	if resp.IsTruncated != nil && !*resp.IsTruncated {
-		if err := collector.Disconnect(ctx); err != nil {
+		if err := collector.Disconnect(); err != nil {
 			return fmt.Errorf("failed to disconnect collector: %w", err)
 		}
 	} else {

@@ -9,7 +9,6 @@ import (
 	"github.com/wombatwisdom/components/mqtt"
 	"github.com/wombatwisdom/components/spec"
 	"github.com/wombatwisdom/components/test"
-	"io"
 )
 
 var _ = Describe("Source", func() {
@@ -37,15 +36,13 @@ var _ = Describe("Source", func() {
 
 	AfterEach(func() {
 		src.Disconnect(context.Background())
-		collector.Disconnect(context.Background())
+		collector.Disconnect()
 	})
 
 	When("sending a message to MQTT", func() {
 		It("should receive the message on the source", func() {
-			msg := spec.NewBytesMessage([]byte("hello, world"), nil)
-			r, err := msg.Data()
-			Expect(err).ToNot(HaveOccurred())
-			b, err := io.ReadAll(r)
+			msg := spec.NewBytesMessage([]byte("hello, world"))
+			b, err := msg.Raw()
 			Expect(err).ToNot(HaveOccurred())
 
 			tc := mqtt2.NewClient(mqtt2.NewClientOptions().AddBroker(url))

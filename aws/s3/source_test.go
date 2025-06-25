@@ -63,7 +63,7 @@ var _ = Describe("Source", func() {
 
 		It("should receive a single message in the source", func() {
 			collector := test.NewListCollector()
-			defer collector.Disconnect(context.Background())
+			defer collector.Disconnect()
 
 			err := src.Read(context.Background(), collector)
 			Expect(err).ToNot(HaveOccurred())

@@ -47,7 +47,7 @@ func (m *Source) Connect(ctx context.Context, collector spec.Collector) error {
 		SetCleanSession(m.CleanSession).
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
 			client.Disconnect(0)
-			_ = collector.Disconnect(ctx)
+			_ = collector.Disconnect()
 			m.log.Errorf("Connection lost due to: %v\n", reason)
 		}).
 		SetOnConnectHandler(func(c mqtt.Client) {
@@ -56,7 +56,7 @@ func (m *Source) Connect(ctx context.Context, collector spec.Collector) error {
 
 				// not being able to write a message will never call the ack function. This means
 				// that the message will be redelivered by the mqtt broker.
-				if err := collector.Write(ctx, message); err != nil {
+				if err := collector.Write(message); err != nil {
 					m.log.Warnf("Failed to write message: %v", err)
 				}
 			})
@@ -64,7 +64,7 @@ func (m *Source) Connect(ctx context.Context, collector spec.Collector) error {
 			if err := tok.Error(); err != nil {
 				m.log.Errorf("Failed to subscribe using filters '%v': %v", m.Filters, err)
 				m.log.Errorf("Shutting connection down.")
-				_ = collector.Disconnect(ctx)
+				_ = collector.Disconnect()
 			}
 		})
 
@@ -81,7 +81,7 @@ func (m *Source) Connect(ctx context.Context, collector spec.Collector) error {
 			select {
 			case <-time.After(time.Second):
 				if !client.IsConnected() {
-					_ = collector.Disconnect(ctx)
+					_ = collector.Disconnect()
 					m.log.Errorf("Connection lost for unknown reasons.")
 					return
 				}

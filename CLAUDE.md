@@ -32,24 +32,54 @@ packagename/
 
 ## Development Commands
 
-### Testing
-- Run all tests: `go test ./...`
-- Run specific package tests: `go test ./nats/core` or `go test ./spec`
-- Run tests with verbose output: `go test ./... -v`
-- Tests use Ginkgo v2 framework with Gomega matchers
-- All packages should have comprehensive test coverage
-
-### Code Generation
-For components with schema files (like `nats/core/`):
+This project uses [Task](https://taskfile.dev) for development workflow automation. Install with:
 ```bash
-cd nats/core/
-task models:generate
+# macOS
+brew install go-task/tap/go-task
+
+# Linux/Windows - see https://taskfile.dev/installation/
 ```
-This generates Go structs from JSON schema files using go-jsonschema.
+
+### Quick Start
+```bash
+task                    # Show all available tasks
+task status            # Show project status
+task setup             # Setup development environment
+task test              # Run working package tests (spec, nats/core)
+task test:all          # Attempt all tests (will fail on legacy components)
+task ci:test           # Run CI pipeline for working packages
+```
+
+### Testing Tasks
+- `task test` - Run working package tests (spec, nats/core) 
+- `task test:all` - Attempt all tests (will fail on legacy mqtt/s3)
+- `task test:short` - Run working tests without verbose output
+- `task test:spec` - Run spec package tests only
+- `task test:nats` - Run NATS core tests only
+- `task test:coverage` - Generate test coverage report
+
+### Code Quality Tasks
+- `task lint` - Run linting checks
+- `task lint:fix` - Run linting with auto-fix
+- `task format` - Format code (go fmt + goimports)
+- `task vet` - Run go vet
+
+### Build Tasks
+- `task build` - Build all packages
+- `task build:check` - Check that all packages compile
+
+### Schema Generation
+- `task schema:generate` - Generate schemas for all components
+- `task nats:schema:generate` - Generate NATS schemas only
+
+### Component Status
+- `task mqtt:status` - Check MQTT component migration status
+- `task s3:status` - Check S3 component migration status
 
 ### Dependencies
-- Install dependencies: `go mod tidy`
-- Update dependencies: `go get -u ./...`
+- `task deps:tidy` - Tidy module dependencies (`go mod tidy`)
+- `task deps:update` - Update dependencies (`go get -u ./...`)
+- `task tools:install` - Install development tools
 
 ## Key Interfaces
 

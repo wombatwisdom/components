@@ -4,11 +4,24 @@ import (
     "context"
     _ "embed"
     "github.com/nats-io/nats.go"
+    "github.com/wombatwisdom/components/spec"
 )
 
 func NewSystem(rawConfig string) (*System, error) {
     var cfg SystemConfig
     if err := cfg.UnmarshalJSON([]byte(rawConfig)); err != nil {
+        return nil, err
+    }
+
+    return &System{
+        cfg: cfg,
+    }, nil
+}
+
+// NewSystemFromConfig creates a system from a spec.Config interface
+func NewSystemFromConfig(config spec.Config) (*System, error) {
+    var cfg SystemConfig
+    if err := config.Decode(&cfg); err != nil {
         return nil, err
     }
 
