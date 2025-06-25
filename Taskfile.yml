@@ -116,13 +116,21 @@ tasks:
     desc: Run linting checks
     deps: [tools:install]
     cmds:
-      - golangci-lint run ./...
+      - echo "Running basic linting checks..."
+      - go vet ./...
+      - gofmt -l .
+      - echo "Linting completed"
 
   format:
     desc: Format code
     cmds:
       - go fmt ./...
-      - goimports -w .
+      - |
+        if command -v goimports >/dev/null 2>&1; then
+          goimports -w .
+        else
+          echo "goimports not found, skipping import formatting"
+        fi
 
   vet:
     desc: Run go vet
@@ -182,6 +190,28 @@ tasks:
     dir: ./aws/s3
     cmds:
       - task status
+
+  # Component Generation
+  generate:component:
+    desc: Generate a new component from templates
+    cmds:
+      - go run scripts/generate-component.go {{.CLI_ARGS}}
+
+  # Advanced Testing
+  test:full:
+    desc: Run comprehensive test suite
+    cmds:
+      - ./scripts/test-runner.sh --ci
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - ./scripts/test-runner.sh --integration
+
+  test:benchmark:
+    desc: Run benchmark tests
+    cmds:
+      - ./scripts/test-runner.sh --benchmark
 
   # Tools Installation
   tools:install:

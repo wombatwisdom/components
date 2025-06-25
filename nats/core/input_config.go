@@ -2,8 +2,10 @@
 
 package core
 
-import "encoding/json"
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type InputConfig struct {
 	// The maximum number of messages to fetch at a time. This field is used to

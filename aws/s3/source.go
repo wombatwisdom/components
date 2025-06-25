@@ -3,6 +3,7 @@ package s3
 import (
 	"context"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/wombatwisdom/components/spec"
@@ -16,6 +17,7 @@ type SourceConfig struct {
 	MaxKeys int32
 
 	ForcePathStyleURLs bool
+	EndpointURL        *string
 }
 
 func NewSource(env spec.Environment, config SourceConfig) (*Source, error) {
@@ -41,6 +43,9 @@ func (s *Source) Connect(ctx context.Context) error {
 
 	s.s3 = s3.NewFromConfig(s.config.Config, func(o *s3.Options) {
 		o.UsePathStyle = s.config.ForcePathStyleURLs
+		if s.config.EndpointURL != nil {
+			o.BaseEndpoint = s.config.EndpointURL
+		}
 	})
 
 	return nil

@@ -9,16 +9,16 @@ import (
 // This is equivalent to benthos's service.Resources but designed for the System-first architecture.
 type ResourceManager interface {
 	Logger() Logger
-	
+
 	// System returns a shared system instance by name
 	System(name string) (System, error)
-	
+
 	// RegisterSystem registers a system instance for sharing
 	RegisterSystem(name string, sys System) error
-	
+
 	// Context returns the base context for operations
 	Context() context.Context
-	
+
 	// Metrics returns a metrics interface (placeholder for future implementation)
 	Metrics() Metrics
 }
@@ -99,10 +99,13 @@ func (n *noopMetrics) Gauge(name string) Gauge     { return &noopGauge{} }
 func (n *noopMetrics) Timer(name string) Timer     { return &noopTimer{} }
 
 type noopCounter struct{}
+
 func (n *noopCounter) Inc(delta int64) {}
 
 type noopGauge struct{}
+
 func (n *noopGauge) Set(value float64) {}
 
 type noopTimer struct{}
+
 func (n *noopTimer) Record(duration float64) {}

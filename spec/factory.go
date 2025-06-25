@@ -6,8 +6,8 @@ package spec
 type ComponentFactory interface {
 	// NewInput creates a new Input component using the provided system and configuration
 	NewInput(sys System, cfg Config) (Input, error)
-	
-	// NewOutput creates a new Output component using the provided system and configuration  
+
+	// NewOutput creates a new Output component using the provided system and configuration
 	NewOutput(sys System, cfg Config) (Output, error)
 }
 

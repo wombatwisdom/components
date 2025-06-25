@@ -2,6 +2,7 @@ package mqtt_test
 
 import (
 	"context"
+
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -48,9 +49,9 @@ var _ = Describe("Roundtrip", func() {
 	})
 
 	AfterEach(func() {
-		src.Disconnect(context.Background())
-		snk.Disconnect(context.Background())
-		collector.Disconnect()
+		_ = src.Disconnect(context.Background())
+		_ = snk.Disconnect(context.Background())
+		_ = collector.Disconnect()
 	})
 
 	When("sending a message to the sink", func() {

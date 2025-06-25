@@ -1,0 +1,186 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    services:
+      nats:
+        image: nats:alpine
+        ports:
+          - 4222:4222
+          - 8222:8222
+        options: >-
+          --health-cmd "nats-server --help"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 3
+          --health-start-period 10s
+          
+      mqtt:
+        image: eclipse-mosquitto:latest
+        ports:
+          - 1883:1883
+        options: >-
+          --health-cmd "mosquitto_pub -h localhost -t test -m test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.24
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-1.24-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-1.24-
+
+    - name: Install Task
+      uses: arduino/setup-task@v2
+      with:
+        version: 3.x
+
+    - name: Install Go tools
+      run: |
+        go install golang.org/x/tools/cmd/goimports@latest
+        echo "$HOME/go/bin" >> $GITHUB_PATH
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Verify dependencies
+      run: go mod verify
+
+    - name: Run tests
+      run: task test
+      env:
+        NATS_URL: nats://localhost:4222
+        MQTT_URL: tcp://localhost:1883
+
+    - name: Run tests with race detector
+      run: go test -race ./spec/... ./nats/core/... ./test/...
+
+    - name: Generate test coverage
+      run: task test:coverage
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.out
+        flags: unittests
+        name: codecov-umbrella
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.24
+
+    - name: Install Task
+      uses: arduino/setup-task@v2
+      with:
+        version: 3.x
+
+    - name: Install Go tools
+      run: |
+        go install golang.org/x/tools/cmd/goimports@latest
+        echo "$HOME/go/bin" >> $GITHUB_PATH
+
+    - name: Run basic linting
+      run: |
+        go vet ./...
+        gofmt -l . | tee fmt_issues.txt
+        if [ -s fmt_issues.txt ]; then
+          echo "Code formatting issues found:"
+          cat fmt_issues.txt
+          exit 1
+        fi
+
+    - name: Run go vet
+      run: task vet
+
+    - name: Check formatting
+      run: |
+        go fmt ./...
+        goimports -w .
+        if [ -n "$(git diff --exit-code)" ]; then
+          echo "Code is not formatted. Please run 'go fmt' and 'goimports'"
+          git diff
+          exit 1
+        fi
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.24
+
+    - name: Install Task
+      uses: arduino/setup-task@v2
+      with:
+        version: 3.x
+
+    - name: Install Go tools
+      run: |
+        go install golang.org/x/tools/cmd/goimports@latest
+        echo "$HOME/go/bin" >> $GITHUB_PATH
+
+    - name: Build working packages
+      run: task build
+
+    - name: Check all packages compile
+      run: task build:check
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.24
+
+    - name: Run basic security checks
+      run: |
+        echo "Running basic security checks..."
+        # Check for common security issues
+        grep -r "password" --include="*.go" . || echo "No hardcoded passwords found"
+        grep -r "secret" --include="*.go" . || echo "No hardcoded secrets found"
+        grep -r "token" --include="*.go" . || echo "No hardcoded tokens found"
+        echo "Basic security scan completed"

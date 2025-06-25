@@ -2,12 +2,13 @@ package mqtt_test
 
 import (
 	"fmt"
+	"testing"
+
 	mochi "github.com/mochi-mqtt/server/v2"
 	"github.com/mochi-mqtt/server/v2/hooks/auth"
 	"github.com/mochi-mqtt/server/v2/listeners"
 	"github.com/wombatwisdom/components/spec"
 	"github.com/wombatwisdom/components/test"
-	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -51,7 +52,7 @@ func TestMqtt(t *testing.T) {
 
 	AfterSuite(func() {
 		if server != nil {
-			server.Close()
+			_ = server.Close()
 		}
 	})
 

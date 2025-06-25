@@ -2,8 +2,10 @@
 
 package core
 
-import "encoding/json"
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type SystemConfig struct {
 	// Optional authentication information for the NATS server.  If not provided, the

@@ -3,11 +3,11 @@ package core
 import "context"
 
 type ComponentContext interface {
-    ExpressionFactory
-    MessageFactory
+	ExpressionFactory
+	MessageFactory
 
-    Context() context.Context
+	Context() context.Context
 
-    Input(name string) (Input, error)
-    Output(name string) (Output, error)
+	Input(name string) (Input, error)
+	Output(name string) (Output, error)
 }

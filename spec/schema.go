@@ -7,19 +7,19 @@ import "encoding/json"
 type ComponentSpec interface {
 	// Name returns the component name used for registration
 	Name() string
-	
+
 	// Summary returns a brief description of the component
 	Summary() string
-	
+
 	// Description returns detailed documentation for the component
 	Description() string
-	
+
 	// InputConfigSchema returns the JSON schema for input component configuration
 	InputConfigSchema() string
-	
-	// OutputConfigSchema returns the JSON schema for output component configuration  
+
+	// OutputConfigSchema returns the JSON schema for output component configuration
 	OutputConfigSchema() string
-	
+
 	// SystemConfigSchema returns the JSON schema for system configuration
 	SystemConfigSchema() string
 }
@@ -39,7 +39,7 @@ type SchemaField struct {
 type ConfigSchema interface {
 	// AddField adds a configuration field to the schema
 	AddField(field SchemaField) ConfigSchema
-	
+
 	// ToJSON returns the JSON schema representation
 	ToJSON() (string, error)
 }
@@ -66,38 +66,38 @@ func (c *configSchema) ToJSON() (string, error) {
 		"properties": make(map[string]any),
 		"required":   []string{},
 	}
-	
+
 	properties := schema["properties"].(map[string]any)
 	required := []string{}
-	
+
 	for name, field := range c.fields {
 		prop := map[string]any{
 			"type":        field.Type,
 			"description": field.Description,
 		}
-		
+
 		if field.Default != nil {
 			prop["default"] = field.Default
 		}
-		
+
 		if len(field.Examples) > 0 {
 			prop["examples"] = field.Examples
 		}
-		
+
 		properties[name] = prop
-		
+
 		if field.Required {
 			required = append(required, name)
 		}
 	}
-	
+
 	schema["required"] = required
-	
+
 	// Convert to JSON
 	jsonBytes, err := json.Marshal(schema)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return string(jsonBytes), nil
 }
