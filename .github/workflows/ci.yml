@@ -63,11 +63,22 @@ jobs:
         go install golang.org/x/tools/cmd/goimports@latest
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
+    - name: Sync workspace dependencies
+      run: go work sync
+
     - name: Download dependencies
-      run: go mod download
+      run: |
+        cd framework && go mod download
+        cd ../components/aws-s3 && go mod download
+        cd ../mqtt && go mod download
+        cd ../nats && go mod download
 
     - name: Verify dependencies
-      run: go mod verify
+      run: |
+        cd framework && go mod verify
+        cd ../components/aws-s3 && go mod verify
+        cd ../mqtt && go mod verify
+        cd ../nats && go mod verify
 
     - name: Run tests
       run: task test
@@ -76,7 +87,7 @@ jobs:
         MQTT_URL: tcp://localhost:1883
 
     - name: Run tests with race detector
-      run: go test -race ./spec/... ./nats/core/... ./test/...
+      run: go test -race ./framework/... ./components/aws-s3/... ./components/mqtt/... ./components/nats/...
 
     - name: Generate test coverage
       run: task test:coverage
@@ -111,10 +122,13 @@ jobs:
         go install golang.org/x/tools/cmd/goimports@latest
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
+    - name: Sync workspace dependencies
+      run: go work sync
+
     - name: Run basic linting
       run: |
-        go vet ./...
-        gofmt -l . | tee fmt_issues.txt
+        go vet ./framework/... ./components/aws-s3/... ./components/mqtt/... ./components/nats/...
+        gofmt -l ./framework ./components | tee fmt_issues.txt
         if [ -s fmt_issues.txt ]; then
           echo "Code formatting issues found:"
           cat fmt_issues.txt
@@ -126,8 +140,8 @@ jobs:
 
     - name: Check formatting
       run: |
-        go fmt ./...
-        goimports -w .
+        go fmt ./framework/... ./components/aws-s3/... ./components/mqtt/... ./components/nats/...
+        goimports -w ./framework ./components
         if [ -n "$(git diff --exit-code)" ]; then
           echo "Code is not formatted. Please run 'go fmt' and 'goimports'"
           git diff
@@ -157,10 +171,13 @@ jobs:
         go install golang.org/x/tools/cmd/goimports@latest
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
-    - name: Build working packages
+    - name: Sync workspace dependencies
+      run: go work sync
+
+    - name: Build all modules
       run: task build
 
-    - name: Check all packages compile
+    - name: Check all modules compile
       run: task build:check
 
   security:
@@ -180,7 +197,7 @@ jobs:
       run: |
         echo "Running basic security checks..."
         # Check for common security issues
-        grep -r "password" --include="*.go" . || echo "No hardcoded passwords found"
-        grep -r "secret" --include="*.go" . || echo "No hardcoded secrets found"
-        grep -r "token" --include="*.go" . || echo "No hardcoded tokens found"
+        grep -r "password" --include="*.go" ./framework ./components || echo "No hardcoded passwords found"
+        grep -r "secret" --include="*.go" ./framework ./components || echo "No hardcoded secrets found"
+        grep -r "token" --include="*.go" ./framework ./components || echo "No hardcoded tokens found"
         echo "Basic security scan completed"

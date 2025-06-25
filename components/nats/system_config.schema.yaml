@@ -1,0 +1,38 @@
+$id: dev.wombat.component.nats.core.system.config
+title: SystemConfig
+type: object
+properties:
+  url:
+    type: string
+    description: >
+      Url of the NATS server to connect to. 
+      Multiple URLs can be specified by separating them with commas. If an item of the list contains commas it will 
+      be expanded into multiple URLs.
+      
+      Examples:
+        - nats://demo.nats.io:4222
+        - nats://server-1:4222,nats://server-2:4222
+    default: nats://localhost:4222
+  name:
+    type: string
+    description: An optional name for the connection to distinguish it from others.
+    default: wombat
+  auth:
+    type: object
+    description: >
+      Optional authentication information for the NATS server. 
+      If not provided, the connection will be made without authentication.
+    properties:
+      seed:
+        type: string
+        description: >
+          The user seed. 
+          This is a sensitive field and you may want to use environment variables instead of defining a constant value.
+      jwt:
+        type: string
+        description: >
+          The user JWT token.
+          This is a sensitive field and you may want to use environment variables instead of defining a constant value.
+    required: [ "jwt", "seed" ]
+required:
+  - url

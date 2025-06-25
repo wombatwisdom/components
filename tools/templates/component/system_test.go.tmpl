@@ -1,0 +1,44 @@
+package {{.Package}}_test
+
+import (
+    "context"
+    . "github.com/onsi/ginkgo/v2"
+    . "github.com/onsi/gomega"
+    "{{.Module}}/{{.Package}}"
+    "{{.Module}}/spec"
+)
+
+var _ = Describe("{{.SystemName}}", func() {
+    When("an invalid configuration format is provided", func() {
+        It("should return an error", func() {
+            config := spec.NewYamlConfig(`
+invalid yaml: [
+{{.ConfigExample}}
+`)
+
+            system, err := {{.Package}}.New{{.SystemName}}FromConfig(config)
+            Expect(err).To(HaveOccurred())
+            Expect(system).To(BeNil())
+        })
+    })
+
+    When("valid configuration is provided", func() {
+        It("should create system successfully", func() {
+            config := spec.NewYamlConfig(`
+{{.ValidConfigExample}}
+`)
+
+            system, err := {{.Package}}.New{{.SystemName}}FromConfig(config)
+            Expect(err).ToNot(HaveOccurred())
+            Expect(system).ToNot(BeNil())
+
+            err = system.Connect(context.Background())
+            Expect(err).ToNot(HaveOccurred())
+            
+            defer func() {
+                err = system.Close(context.Background())
+                Expect(err).ToNot(HaveOccurred())
+            }()
+        })
+    })
+})
