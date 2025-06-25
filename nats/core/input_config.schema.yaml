@@ -1,0 +1,24 @@
+$id: dev.wombat.component.nats.core.input.config
+title: InputConfig
+type: object
+properties:
+  subject:
+    type: string
+    description: >
+      The subject to subscribe to.
+      The subject may contain wildcards, which will be matched against any subject that matches the pattern.
+  queue:
+    type: string
+    description: >
+      An optional queue group to join.
+      If set, the subscription will be load balancing messages across all members of the group.
+  batch_count:
+    type: integer
+    default: 1
+    description: >
+      The maximum number of messages to fetch at a time.
+      This field is used to control the number of messages that are fetched from the NATS server in a single batch. 
+      Processing guarantees apply to the batch, not individual messages. This means that when processing a batch of messages,
+      a failure would cause the entire batch to be reprocessed.
+required:
+  - subject
