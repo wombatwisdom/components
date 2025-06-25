@@ -167,7 +167,7 @@ func Test%s(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "%s Suite")
 }
-`, config.Package, strings.Title(config.Package), strings.Title(config.ServiceName))
+`, config.Package, cases.Title(language.English).String(config.Package), cases.Title(language.English).String(config.ServiceName))
 
 	return os.WriteFile(outputPath, []byte(suiteContent), 0644)
 }

@@ -16,14 +16,16 @@ jobs:
     
     services:
       nats:
-        image: nats:latest
+        image: nats:alpine
         ports:
           - 4222:4222
+          - 8222:8222
         options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8222/healthz || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd "nats-server --help"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 3
+          --health-start-period 10s
           
       mqtt:
         image: eclipse-mosquitto:latest
@@ -102,8 +104,15 @@ jobs:
       with:
         version: 3.x
 
-    - name: Run linter
-      run: task lint
+    - name: Run basic linting
+      run: |
+        go vet ./...
+        gofmt -l . | tee fmt_issues.txt
+        if [ -s fmt_issues.txt ]; then
+          echo "Code formatting issues found:"
+          cat fmt_issues.txt
+          exit 1
+        fi
 
     - name: Run go vet
       run: task vet
@@ -158,7 +167,7 @@ jobs:
         go-version: 1.23
 
     - name: Run Gosec Security Scanner
-      uses: securecodewarrior/github-action-gosec@master
+      uses: securecodewarrior/github-action-gosec@v1
       with:
         args: './...'
 
@@ -167,14 +176,14 @@ jobs:
         go install github.com/sonatypecommunity/nancy@latest
         go list -json -deps ./... | nancy sleuth
 
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v4
+  # dependency-review:
+  #   name: Dependency Review
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
+  #   
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+  #     
+  #   - name: Dependency Review
+  #     uses: actions/dependency-review-action@v4

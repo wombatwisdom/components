@@ -11,7 +11,10 @@
       "Bash(git push:*)",
       "Bash(go get:*)",
       "Bash(golangci-lint:*)",
-      "Bash(go mod:*)"
+      "Bash(go mod:*)",
+      "Bash(git commit:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr view:*)"
     ],
     "deny": []
   }
