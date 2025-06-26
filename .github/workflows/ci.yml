@@ -64,7 +64,13 @@ jobs:
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
     - name: Sync workspace dependencies
-      run: go work sync
+      run: |
+        go work sync
+        go mod tidy -C framework
+        go mod tidy -C components/aws-s3
+        go mod tidy -C components/mqtt
+        go mod tidy -C components/nats
+        go mod tidy -C tools
 
     - name: Download dependencies
       run: |
@@ -72,6 +78,7 @@ jobs:
         go mod download -C components/aws-s3
         go mod download -C components/mqtt
         go mod download -C components/nats
+        go mod download -C tools
 
     - name: Verify dependencies
       run: |
@@ -79,6 +86,7 @@ jobs:
         go mod verify -C components/aws-s3
         go mod verify -C components/mqtt
         go mod verify -C components/nats
+        go mod verify -C tools
 
     - name: Run tests
       run: task test
@@ -123,7 +131,13 @@ jobs:
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
     - name: Sync workspace dependencies
-      run: go work sync
+      run: |
+        go work sync
+        go mod tidy -C framework
+        go mod tidy -C components/aws-s3
+        go mod tidy -C components/mqtt
+        go mod tidy -C components/nats
+        go mod tidy -C tools
 
     - name: Run basic linting
       run: |
@@ -172,7 +186,13 @@ jobs:
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
     - name: Sync workspace dependencies
-      run: go work sync
+      run: |
+        go work sync
+        go mod tidy -C framework
+        go mod tidy -C components/aws-s3
+        go mod tidy -C components/mqtt
+        go mod tidy -C components/nats
+        go mod tidy -C tools
 
     - name: Build all modules
       run: task build
