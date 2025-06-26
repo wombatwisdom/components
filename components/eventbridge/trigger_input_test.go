@@ -18,7 +18,7 @@ var _ = Describe("TriggerInput", func() {
 	BeforeEach(func() {
 		ctx = test.NewMockComponentContext()
 		config = eventbridge.DefaultTriggerInputConfig()
-		config.RuleName = "test-rule"
+		config.Mode = "simulation" // Use simulation mode for tests
 		config.EventSource = "aws.s3"
 		config.MaxBatchSize = 5
 	})

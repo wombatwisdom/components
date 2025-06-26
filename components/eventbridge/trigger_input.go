@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/wombatwisdom/components/framework/spec"
 )
 
@@ -18,18 +17,15 @@ func NewTriggerInput(ctx spec.ComponentContext, config TriggerInputConfig) (*Tri
 	return &TriggerInput{
 		config: config,
 		ctx:    ctx,
-		events: make(chan EventBridgeEvent, config.MaxBatchSize*2), // Buffer for events
 	}, nil
 }
 
 // TriggerInput implements spec.TriggerInput for EventBridge events
 type TriggerInput struct {
-	config TriggerInputConfig
-	ctx    spec.ComponentContext
-	client *eventbridge.Client
-	events chan EventBridgeEvent
-	done   chan struct{}
-	closed bool
+	config      TriggerInputConfig
+	ctx         spec.ComponentContext
+	integration EventIntegration
+	closed      bool
 }
 
 // EventBridgeEvent represents a processed EventBridge event
@@ -47,24 +43,23 @@ type EventBridgeEvent struct {
 func (t *TriggerInput) Init(ctx spec.ComponentContext) error {
 	t.ctx = ctx
 	
-	// Create EventBridge client
-	ebClient := eventbridge.NewFromConfig(t.config.Config, func(o *eventbridge.Options) {
-		if t.config.EndpointURL != nil {
-			o.BaseEndpoint = t.config.EndpointURL
-		}
-		if t.config.Region != "" {
-			o.Region = t.config.Region
-		}
-	})
+	// Create the appropriate integration
+	factory := NewIntegrationFactory(t.config)
+	integration, err := factory.CreateIntegration()
+	if err != nil {
+		return fmt.Errorf("failed to create integration: %w", err)
+	}
 	
-	t.client = ebClient
-	t.done = make(chan struct{})
+	t.integration = integration
 	
-	ctx.Infof("EventBridge trigger input initialized for bus: %s, rule: %s", 
-		t.config.EventBusName, t.config.RuleName)
+	// Initialize the integration
+	err = t.integration.Init(ctx.Context(), ctx)
+	if err != nil {
+		return fmt.Errorf("failed to initialize integration: %w", err)
+	}
 	
-	// Start event polling (in real implementation, this would be SQS or Lambda integration)
-	go t.pollEvents()
+	ctx.Infof("EventBridge trigger input initialized with %s mode for bus: %s", 
+		t.config.Mode, t.config.EventBusName)
 	
 	return nil
 }
@@ -76,13 +71,11 @@ func (t *TriggerInput) Close(ctx spec.ComponentContext) error {
 	}
 	t.closed = true
 	
-	if t.done != nil {
-		close(t.done)
-		t.done = nil
-	}
-	if t.events != nil {
-		close(t.events)
-		t.events = nil
+	if t.integration != nil {
+		err := t.integration.Close(ctx.Context())
+		if err != nil {
+			ctx.Warnf("Error closing integration: %v", err)
+		}
 	}
 	
 	ctx.Infof("EventBridge trigger input closed")
@@ -98,30 +91,17 @@ func (t *TriggerInput) ReadTriggers(ctx spec.ComponentContext) (spec.TriggerBatc
 		return batch, spec.NoopCallback, nil
 	}
 	
-	// Collect events up to max batch size with timeout
-	timeout := time.NewTimer(100 * time.Millisecond)
-	defer timeout.Stop()
+	// Read events from the integration
+	timeout := 100 * time.Millisecond
+	events, err := t.integration.ReadEvents(ctx.Context(), t.config.MaxBatchSize, timeout)
+	if err != nil {
+		return batch, spec.NoopCallback, fmt.Errorf("failed to read events: %w", err)
+	}
 	
-collecting:
-	for len(batch.Triggers()) < t.config.MaxBatchSize {
-		select {
-		case event, ok := <-t.events:
-			if !ok {
-				// Channel closed
-				break collecting
-			}
-			
-			trigger := t.convertEventToTrigger(event)
-			batch.Append(trigger)
-			
-		case <-timeout.C:
-			// Timeout reached, return what we have
-			break collecting
-			
-		case <-t.done:
-			// Component shutting down
-			break collecting
-		}
+	// Convert events to triggers
+	for _, event := range events {
+		trigger := t.convertEventToTrigger(event)
+		batch.Append(trigger)
 	}
 	
 	return batch, spec.NoopCallback, nil
@@ -212,59 +192,3 @@ func (t *TriggerInput) extractS3Metadata(event EventBridgeEvent, metadata map[st
 	}
 }
 
-// pollEvents simulates polling for EventBridge events
-// In a real implementation, this would integrate with SQS, Lambda, or EventBridge Pipes
-func (t *TriggerInput) pollEvents() {
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-	
-	for {
-		select {
-		case <-ticker.C:
-			// Simulate receiving an S3 event (in real implementation, this would come from SQS/Lambda)
-			if t.shouldSimulateEvent() {
-				event := t.createSimulatedS3Event()
-				select {
-				case t.events <- event:
-					t.ctx.Debugf("Received EventBridge event: %s", event.DetailType)
-				default:
-					// Channel full, drop event
-					t.ctx.Warnf("Event channel full, dropping event")
-				}
-			}
-			
-		case <-t.done:
-			return
-		}
-	}
-}
-
-// shouldSimulateEvent determines if we should create a simulated event (for testing)
-func (t *TriggerInput) shouldSimulateEvent() bool {
-	// Disable event simulation in test environment
-	// In real implementation, this would be controlled by configuration
-	return false
-}
-
-// createSimulatedS3Event creates a sample S3 event for testing
-func (t *TriggerInput) createSimulatedS3Event() EventBridgeEvent {
-	return EventBridgeEvent{
-		Source:     "aws.s3",
-		DetailType: "Object Created",
-		Detail: map[string]interface{}{
-			"eventName": "ObjectCreated:Put",
-			"bucket": map[string]interface{}{
-				"name": "test-bucket",
-			},
-			"object": map[string]interface{}{
-				"key":  fmt.Sprintf("data/file-%d.json", time.Now().Unix()),
-				"size": float64(1024),
-				"etag": "\"d41d8cd98f00b204e9800998ecf8427e\"",
-			},
-		},
-		Time:      time.Now(),
-		Region:    t.config.Region,
-		Account:   "123456789012",
-		Resources: []string{"arn:aws:s3:::test-bucket"},
-	}
-}

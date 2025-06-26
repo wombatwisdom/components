@@ -30,7 +30,8 @@
       "Bash(goimports:*)",
       "Bash(go vet:*)",
       "Bash(go fmt:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(go run:*)"
     ],
     "deny": []
   }
