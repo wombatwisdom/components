@@ -99,11 +99,11 @@ jobs:
 
     - name: Run tests with race detector
       run: |
-        go test -C framework -race ./...
-        go test -C components/aws-s3 -race ./...
-        go test -C components/eventbridge -race ./...
-        go test -C components/mqtt -race ./...
-        go test -C components/nats -race ./...
+        (cd framework && go test -race ./...)
+        (cd components/aws-s3 && go test -race ./...)
+        (cd components/eventbridge && go test -race ./...)
+        (cd components/mqtt && go test -race ./...)
+        (cd components/nats && go test -race ./...)
 
     - name: Generate test coverage
       run: task test:coverage
