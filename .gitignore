@@ -45,6 +45,9 @@ coverage.html
 *.local.yaml
 *.local.json
 
+# Claude AI settings
+.claude/
+
 # Generated files
 *_config.go
 !system_config.go
