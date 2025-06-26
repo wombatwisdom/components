@@ -22,7 +22,11 @@ type ListCollector struct {
 }
 
 func (l *ListCollector) Wait() {
-	if len(l.messages) > 0 {
+	l.lock.Lock()
+	hasMessages := len(l.messages) > 0
+	l.lock.Unlock()
+	
+	if hasMessages {
 		return
 	}
 
