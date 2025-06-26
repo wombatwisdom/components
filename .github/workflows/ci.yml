@@ -68,6 +68,7 @@ jobs:
         go work sync
         go mod tidy -C framework
         go mod tidy -C components/aws-s3
+        go mod tidy -C components/eventbridge
         go mod tidy -C components/mqtt
         go mod tidy -C components/nats
         go mod tidy -C tools
@@ -76,6 +77,7 @@ jobs:
       run: |
         go mod download -C framework
         go mod download -C components/aws-s3
+        go mod download -C components/eventbridge
         go mod download -C components/mqtt
         go mod download -C components/nats
         go mod download -C tools
@@ -84,6 +86,7 @@ jobs:
       run: |
         go mod verify -C framework
         go mod verify -C components/aws-s3
+        go mod verify -C components/eventbridge
         go mod verify -C components/mqtt
         go mod verify -C components/nats
         go mod verify -C tools
@@ -96,10 +99,11 @@ jobs:
 
     - name: Run tests with race detector
       run: |
-        go test -C framework -race ./...
-        go test -C components/aws-s3 -race ./...
-        go test -C components/mqtt -race ./...
-        go test -C components/nats -race ./...
+        (cd framework && go test -race ./...)
+        (cd components/aws-s3 && go test -race ./...)
+        (cd components/eventbridge && go test -race ./...)
+        (cd components/mqtt && go test -race ./...)
+        (cd components/nats && go test -race ./...)
 
     - name: Generate test coverage
       run: task test:coverage
@@ -139,6 +143,7 @@ jobs:
         go work sync
         go mod tidy -C framework
         go mod tidy -C components/aws-s3
+        go mod tidy -C components/eventbridge
         go mod tidy -C components/mqtt
         go mod tidy -C components/nats
         go mod tidy -C tools
@@ -148,6 +153,7 @@ jobs:
         # Run go vet on each module separately
         go vet -C framework ./...
         go vet -C components/aws-s3 ./...
+        go vet -C components/eventbridge ./...
         go vet -C components/mqtt ./...
         go vet -C components/nats ./...
         # Check formatting
@@ -166,6 +172,7 @@ jobs:
         # Format each module separately
         go fmt -C framework ./...
         go fmt -C components/aws-s3 ./...
+        go fmt -C components/eventbridge ./...
         go fmt -C components/mqtt ./...
         go fmt -C components/nats ./...
         goimports -w ./framework ./components
@@ -204,6 +211,7 @@ jobs:
         go work sync
         go mod tidy -C framework
         go mod tidy -C components/aws-s3
+        go mod tidy -C components/eventbridge
         go mod tidy -C components/mqtt
         go mod tidy -C components/nats
         go mod tidy -C tools
