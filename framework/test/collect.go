@@ -25,7 +25,7 @@ func (l *ListCollector) Wait() {
 	l.lock.Lock()
 	hasMessages := len(l.messages) > 0
 	l.lock.Unlock()
-	
+
 	if hasMessages {
 		return
 	}

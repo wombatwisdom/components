@@ -25,7 +25,9 @@
       "Bash(gh run list:*)",
       "Bash(GOWORK=off go mod tidy)",
       "Bash(go work:*)",
-      "Bash(go list:*)"
+      "Bash(go list:*)",
+      "Bash(gofmt:*)",
+      "Bash(goimports:*)"
     ],
     "deny": []
   }
