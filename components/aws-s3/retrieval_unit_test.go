@@ -88,7 +88,7 @@ var _ = Describe("S3 Retrieval Processor Unit Tests", func() {
 			batch, callback, err := processor.Retrieve(ctx, triggers)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(batch).ToNot(BeNil())
-			
+
 			// Count messages in batch
 			messageCount := 0
 			for range batch.Messages() {

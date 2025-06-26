@@ -10,7 +10,7 @@ var _ = Describe("TriggerInputConfig", func() {
 	Describe("DefaultTriggerInputConfig", func() {
 		It("should return valid defaults", func() {
 			config := eventbridge.DefaultTriggerInputConfig()
-			
+
 			Expect(string(config.Mode)).To(Equal("sqs"))
 			Expect(config.EventBusName).To(Equal("default"))
 			Expect(config.MaxBatchSize).To(Equal(10))

@@ -71,7 +71,7 @@ var _ = Describe("TriggerInput", func() {
 			var err error
 			input, err = eventbridge.NewTriggerInput(ctx, config)
 			Expect(err).ToNot(HaveOccurred())
-			
+
 			err = input.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -108,14 +108,14 @@ var _ = Describe("TriggerInput", func() {
 		It("should create proper S3 reference URIs", func() {
 			// Test S3 event processing
 			config.EventSource = "aws.s3"
-			
+
 			input, err := eventbridge.NewTriggerInput(ctx, config)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(input).ToNot(BeNil())
-			
+
 			err = input.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			
+
 			// The actual event processing happens in the background
 			// For this test, we verify the input was created successfully
 			// and can be initialized without errors

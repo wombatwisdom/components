@@ -14,10 +14,10 @@ import (
 type EventIntegration interface {
 	// Init initializes the integration
 	Init(ctx context.Context, logger spec.Logger) error
-	
+
 	// ReadEvents reads events from the integration source
 	ReadEvents(ctx context.Context, maxEvents int, timeout time.Duration) ([]EventBridgeEvent, error)
-	
+
 	// Close shuts down the integration
 	Close(ctx context.Context) error
 }
@@ -45,7 +45,7 @@ func (f *IntegrationFactory) CreateIntegration() (EventIntegration, error) {
 			}
 		})
 		return NewSQSIntegration(f.config, sqsClient), nil
-		
+
 	case PipesMode:
 		pipesClient := pipes.NewFromConfig(f.config.Config, func(o *pipes.Options) {
 			if f.config.EndpointURL != nil {
@@ -64,10 +64,10 @@ func (f *IntegrationFactory) CreateIntegration() (EventIntegration, error) {
 			}
 		})
 		return NewPipesIntegration(f.config, pipesClient, eventBridgeClient), nil
-		
+
 	case SimulationMode:
 		return NewSimulationIntegration(f.config), nil
-		
+
 	default:
 		return nil, ErrInvalidIntegrationMode
 	}

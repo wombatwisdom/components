@@ -19,7 +19,7 @@ type RetrievalConfig struct {
 	EndpointURL        *string
 
 	// Retrieval options
-	MaxConcurrentRetrivals int // Maximum concurrent S3 retrievals
+	MaxConcurrentRetrivals int    // Maximum concurrent S3 retrievals
 	FilterPrefix           string // Only retrieve objects with this prefix
 	FilterSuffix           string // Only retrieve objects with this suffix
 }
@@ -45,7 +45,7 @@ type RetrievalProcessor struct {
 // Init initializes the S3 retrieval processor
 func (r *RetrievalProcessor) Init(ctx spec.ComponentContext) error {
 	r.logger = ctx
-	
+
 	r.s3 = s3.NewFromConfig(r.config.Config, func(o *s3.Options) {
 		o.UsePathStyle = r.config.ForcePathStyleURLs
 		if r.config.EndpointURL != nil {
@@ -67,7 +67,7 @@ func (r *RetrievalProcessor) Close(ctx spec.ComponentContext) error {
 func (r *RetrievalProcessor) Retrieve(ctx spec.ComponentContext, triggers spec.TriggerBatch) (spec.Batch, spec.ProcessedCallback, error) {
 	batch := ctx.NewBatch()
 	triggerList := triggers.Triggers()
-	
+
 	if len(triggerList) == 0 {
 		return batch, spec.NoopCallback, nil
 	}
@@ -77,12 +77,12 @@ func (r *RetrievalProcessor) Retrieve(ctx spec.ComponentContext, triggers spec.T
 	// Process triggers with concurrency control
 	semaphore := make(chan struct{}, r.config.MaxConcurrentRetrivals)
 	results := make(chan retrievalResult, len(triggerList))
-	
+
 	for _, trigger := range triggerList {
 		go func(t spec.TriggerEvent) {
-			semaphore <- struct{}{} // Acquire semaphore
+			semaphore <- struct{}{}        // Acquire semaphore
 			defer func() { <-semaphore }() // Release semaphore
-			
+
 			result := r.retrieveSingleObject(ctx.Context(), t)
 			results <- result
 		}(trigger)
@@ -150,7 +150,7 @@ func (r *RetrievalProcessor) retrieveSingleObject(ctx context.Context, trigger s
 
 	// Create message from S3 response
 	message := NewObjectResponseMessage(resp)
-	
+
 	// Add trigger metadata to message
 	message.SetMetadata("trigger_source", trigger.Source())
 	message.SetMetadata("trigger_timestamp", trigger.Timestamp())
@@ -159,7 +159,7 @@ func (r *RetrievalProcessor) retrieveSingleObject(ctx context.Context, trigger s
 	}
 
 	r.logger.Debugf("Successfully retrieved S3 object %s/%s", s3Info.Bucket, s3Info.Key)
-	
+
 	return retrievalResult{
 		reference: trigger.Reference(),
 		message:   message,
@@ -175,21 +175,21 @@ type s3ObjectInfo struct {
 // extractS3Info extracts S3 bucket and key from trigger event
 func (r *RetrievalProcessor) extractS3Info(trigger spec.TriggerEvent) (s3ObjectInfo, error) {
 	metadata := trigger.Metadata()
-	
+
 	// Try to get bucket and key from metadata first
 	if bucket, ok := metadata["bucket"].(string); ok {
 		if key, ok := metadata["key"].(string); ok {
 			return s3ObjectInfo{Bucket: bucket, Key: key}, nil
 		}
 	}
-	
+
 	// Try to parse from reference (format: bucket/key)
 	reference := trigger.Reference()
 	parts := strings.SplitN(reference, "/", 2)
 	if len(parts) == 2 {
 		return s3ObjectInfo{Bucket: parts[0], Key: parts[1]}, nil
 	}
-	
+
 	// Try EventBridge S3 event format
 	if bucket, ok := metadata["bucket"].(map[string]interface{}); ok {
 		if name, ok := bucket["name"].(string); ok {
@@ -200,7 +200,7 @@ func (r *RetrievalProcessor) extractS3Info(trigger spec.TriggerEvent) (s3ObjectI
 			}
 		}
 	}
-	
+
 	return s3ObjectInfo{}, fmt.Errorf("unable to extract S3 bucket and key from trigger: %s", reference)
 }
 
@@ -209,10 +209,10 @@ func (r *RetrievalProcessor) shouldRetrieve(key string) bool {
 	if r.config.FilterPrefix != "" && !strings.HasPrefix(key, r.config.FilterPrefix) {
 		return false
 	}
-	
+
 	if r.config.FilterSuffix != "" && !strings.HasSuffix(key, r.config.FilterSuffix) {
 		return false
 	}
-	
+
 	return true
 }

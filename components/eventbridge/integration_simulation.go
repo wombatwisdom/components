@@ -31,14 +31,14 @@ func (s *SimulationIntegration) Init(ctx context.Context, logger spec.Logger) er
 // ReadEvents generates simulated events for testing
 func (s *SimulationIntegration) ReadEvents(ctx context.Context, maxEvents int, timeout time.Duration) ([]EventBridgeEvent, error) {
 	events := make([]EventBridgeEvent, 0, maxEvents)
-	
+
 	// Only generate events occasionally to avoid flooding tests
 	if s.shouldGenerateEvent() {
 		event := s.createSimulatedEvent()
 		events = append(events, event)
 		s.logger.Debugf("Generated simulated event: %s", event.DetailType)
 	}
-	
+
 	// Wait for the timeout to simulate real polling behavior
 	select {
 	case <-time.After(timeout):
@@ -60,7 +60,7 @@ func (s *SimulationIntegration) shouldGenerateEvent() bool {
 // createSimulatedEvent creates a sample event based on the configured event source
 func (s *SimulationIntegration) createSimulatedEvent() EventBridgeEvent {
 	now := time.Now()
-	
+
 	switch s.config.EventSource {
 	case "aws.s3":
 		return s.createS3Event(now)

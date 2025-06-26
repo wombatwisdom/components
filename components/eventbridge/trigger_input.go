@@ -30,37 +30,37 @@ type TriggerInput struct {
 
 // EventBridgeEvent represents a processed EventBridge event
 type EventBridgeEvent struct {
-	Source      string                 `json:"source"`
-	DetailType  string                 `json:"detail-type"`
-	Detail      map[string]interface{} `json:"detail"`
-	Time        time.Time              `json:"time"`
-	Region      string                 `json:"region"`
-	Account     string                 `json:"account"`
-	Resources   []string               `json:"resources"`
+	Source     string                 `json:"source"`
+	DetailType string                 `json:"detail-type"`
+	Detail     map[string]interface{} `json:"detail"`
+	Time       time.Time              `json:"time"`
+	Region     string                 `json:"region"`
+	Account    string                 `json:"account"`
+	Resources  []string               `json:"resources"`
 }
 
 // Init initializes the EventBridge trigger input
 func (t *TriggerInput) Init(ctx spec.ComponentContext) error {
 	t.ctx = ctx
-	
+
 	// Create the appropriate integration
 	factory := NewIntegrationFactory(t.config)
 	integration, err := factory.CreateIntegration()
 	if err != nil {
 		return fmt.Errorf("failed to create integration: %w", err)
 	}
-	
+
 	t.integration = integration
-	
+
 	// Initialize the integration
 	err = t.integration.Init(ctx.Context(), ctx)
 	if err != nil {
 		return fmt.Errorf("failed to initialize integration: %w", err)
 	}
-	
-	ctx.Infof("EventBridge trigger input initialized with %s mode for bus: %s", 
+
+	ctx.Infof("EventBridge trigger input initialized with %s mode for bus: %s",
 		t.config.Mode, t.config.EventBusName)
-	
+
 	return nil
 }
 
@@ -70,14 +70,14 @@ func (t *TriggerInput) Close(ctx spec.ComponentContext) error {
 		return nil
 	}
 	t.closed = true
-	
+
 	if t.integration != nil {
 		err := t.integration.Close(ctx.Context())
 		if err != nil {
 			ctx.Warnf("Error closing integration: %v", err)
 		}
 	}
-	
+
 	ctx.Infof("EventBridge trigger input closed")
 	return nil
 }
@@ -85,25 +85,25 @@ func (t *TriggerInput) Close(ctx spec.ComponentContext) error {
 // ReadTriggers reads trigger events from EventBridge
 func (t *TriggerInput) ReadTriggers(ctx spec.ComponentContext) (spec.TriggerBatch, spec.ProcessedCallback, error) {
 	batch := spec.NewTriggerBatch()
-	
+
 	// If component is closed, return empty batch
 	if t.closed {
 		return batch, spec.NoopCallback, nil
 	}
-	
+
 	// Read events from the integration
 	timeout := 100 * time.Millisecond
 	events, err := t.integration.ReadEvents(ctx.Context(), t.config.MaxBatchSize, timeout)
 	if err != nil {
 		return batch, spec.NoopCallback, fmt.Errorf("failed to read events: %w", err)
 	}
-	
+
 	// Convert events to triggers
 	for _, event := range events {
 		trigger := t.convertEventToTrigger(event)
 		batch.Append(trigger)
 	}
-	
+
 	return batch, spec.NoopCallback, nil
 }
 
@@ -112,7 +112,7 @@ func (t *TriggerInput) convertEventToTrigger(event EventBridgeEvent) spec.Trigge
 	// Extract S3 information if this is an S3 event
 	reference := t.extractReference(event)
 	metadata := t.extractMetadata(event)
-	
+
 	return spec.NewTriggerEvent(
 		spec.TriggerSourceEventBridge,
 		reference,
@@ -134,12 +134,12 @@ func (t *TriggerInput) extractReference(event EventBridgeEvent) string {
 			}
 		}
 	}
-	
+
 	// For other events, use a generic reference
 	if len(event.Resources) > 0 {
 		return event.Resources[0]
 	}
-	
+
 	return fmt.Sprintf("%s-%d", event.Source, time.Now().UnixNano())
 }
 
@@ -153,17 +153,17 @@ func (t *TriggerInput) extractMetadata(event EventBridgeEvent) map[string]any {
 		"event_account":   event.Account,
 		"event_resources": event.Resources,
 	}
-	
+
 	// Extract S3-specific metadata
 	if event.Source == "aws.s3" {
 		t.extractS3Metadata(event, metadata)
 	}
-	
+
 	// Add custom detail fields
 	for key, value := range event.Detail {
 		metadata[fmt.Sprintf("detail_%s", key)] = value
 	}
-	
+
 	return metadata
 }
 
@@ -174,7 +174,7 @@ func (t *TriggerInput) extractS3Metadata(event EventBridgeEvent, metadata map[st
 			metadata[spec.MetadataBucket] = bucketName
 		}
 	}
-	
+
 	if object, ok := event.Detail["object"].(map[string]interface{}); ok {
 		if key, ok := object["key"].(string); ok {
 			metadata[spec.MetadataKey] = key
@@ -186,9 +186,8 @@ func (t *TriggerInput) extractS3Metadata(event EventBridgeEvent, metadata map[st
 			metadata[spec.MetadataETag] = strings.Trim(etag, "\"")
 		}
 	}
-	
+
 	if eventName, ok := event.Detail["eventName"].(string); ok {
 		metadata[spec.MetadataEventName] = eventName
 	}
 }
-

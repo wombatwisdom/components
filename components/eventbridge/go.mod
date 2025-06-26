@@ -5,6 +5,8 @@ go 1.24
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.5
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.36.7
+	github.com/aws/aws-sdk-go-v2/service/pipes v1.19.5
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.8
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/wombatwisdom/components/framework v0.0.0-00010101000000-000000000000
@@ -16,8 +18,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.36 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.36 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.29 // indirect
-	github.com/aws/aws-sdk-go-v2/service/pipes v1.19.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.8 // indirect
 	github.com/aws/smithy-go v1.22.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-logr/logr v1.4.2 // indirect

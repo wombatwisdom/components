@@ -57,13 +57,13 @@ type TriggerBatch interface {
 type TriggerEvent interface {
 	// Source identifies the trigger mechanism (e.g., "eventbridge", "s3-polling", "generate")
 	Source() string
-	
+
 	// Reference provides the data location/identifier (e.g., S3 key, event ID)
 	Reference() string
-	
+
 	// Metadata contains trigger-specific context
 	Metadata() map[string]any
-	
+
 	// Timestamp when the trigger was generated
 	Timestamp() int64
 }
