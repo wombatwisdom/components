@@ -29,7 +29,8 @@
       "Bash(gofmt:*)",
       "Bash(goimports:*)",
       "Bash(go vet:*)",
-      "Bash(go fmt:*)"
+      "Bash(go fmt:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }

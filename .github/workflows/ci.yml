@@ -169,9 +169,10 @@ jobs:
         go fmt -C components/mqtt ./...
         go fmt -C components/nats ./...
         goimports -w ./framework ./components
-        if [ -n "$(git diff --exit-code)" ]; then
-          echo "Code is not formatted. Please run 'go fmt' and 'goimports'"
-          git diff
+        # Check for formatting changes (excluding go.mod/go.sum dependency updates)
+        if [ -n "$(git diff --exit-code --name-only | grep -v 'go\.mod$\|go\.sum$')" ]; then
+          echo "Code formatting issues found:"
+          git diff --name-only | grep -v 'go\.mod$\|go\.sum$' | xargs git diff
           exit 1
         fi
 

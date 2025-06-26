@@ -1,0 +1,43 @@
+repos:
+  - repo: local
+    hooks:
+      - id: go-fmt
+        name: Go Format
+        entry: gofmt
+        language: system
+        files: \.go$
+        args: [-w]
+        
+      - id: go-imports
+        name: Go Imports
+        entry: goimports
+        language: system
+        files: \.go$
+        args: [-w]
+        
+      - id: go-vet
+        name: Go Vet
+        entry: bash
+        language: system
+        files: \.go$
+        args:
+          - -c
+          - |
+            go vet -C framework ./...
+            go vet -C components/aws-s3 ./...
+            go vet -C components/mqtt ./...
+            go vet -C components/nats ./...
+            
+      - id: go-mod-tidy
+        name: Go Mod Tidy
+        entry: bash
+        language: system
+        files: go\.mod$
+        args:
+          - -c
+          - |
+            go mod tidy -C framework
+            go mod tidy -C components/aws-s3
+            go mod tidy -C components/mqtt
+            go mod tidy -C components/nats
+            go mod tidy -C tools
