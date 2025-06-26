@@ -27,7 +27,9 @@
       "Bash(go work:*)",
       "Bash(go list:*)",
       "Bash(gofmt:*)",
-      "Bash(goimports:*)"
+      "Bash(goimports:*)",
+      "Bash(go vet:*)",
+      "Bash(go fmt:*)"
     ],
     "deny": []
   }
