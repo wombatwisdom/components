@@ -68,17 +68,17 @@ jobs:
 
     - name: Download dependencies
       run: |
-        cd framework && go mod download
-        cd ../components/aws-s3 && go mod download
-        cd ../components/mqtt && go mod download
-        cd ../components/nats && go mod download
+        go mod download -C framework
+        go mod download -C components/aws-s3
+        go mod download -C components/mqtt
+        go mod download -C components/nats
 
     - name: Verify dependencies
       run: |
-        cd framework && go mod verify
-        cd ../components/aws-s3 && go mod verify
-        cd ../components/mqtt && go mod verify
-        cd ../components/nats && go mod verify
+        go mod verify -C framework
+        go mod verify -C components/aws-s3
+        go mod verify -C components/mqtt
+        go mod verify -C components/nats
 
     - name: Run tests
       run: task test
