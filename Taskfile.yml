@@ -12,29 +12,30 @@ tasks:
   status:
     desc: Show project status
     cmds:
-      - echo "WombatWisdom Components Status:"
+      - echo "WombatWisdom Components Status (Go Workspace):"
       - echo ""
-      - echo "Working packages:"
-      - echo "  - spec/ - Enhanced interfaces (30 tests passing)"
-      - echo "  - nats/core/ - System-first implementation (3 tests passing)"  
-      - echo "  - mqtt/ - MQTT components (tests passing)"
-      - echo "  - test/ - Testing utilities"
+      - echo "Framework module:"
+      - echo "  - framework/ - Core interfaces and utilities"
       - echo ""
-      - echo "Packages with test infrastructure issues:"
-      - echo "  - aws/s3/ - Code working, test setup needs fixing"
+      - echo "Component modules:"
+      - echo "  - components/aws-s3/ - AWS S3 Input component"
+      - echo "  - components/mqtt/ - MQTT Input/Output components"  
+      - echo "  - components/nats/ - NATS Input/Output components"
+      - echo ""
+      - echo "Tools:"
+      - echo "  - tools/ - Build scripts and templates"
       - echo ""
       - echo "Quick commands:"
-      - echo "  task test:all   - Run all package tests"
-      - echo "  task build      - Build all packages"
-      - echo "  task ci:test    - Run CI pipeline"
+      - echo "  task test:all   - Run all workspace tests"
+      - echo "  task build:all  - Build all workspace modules"
+      - echo "  task lint:all   - Lint all workspace modules"
 
   # Development Environment
   setup:
     desc: Setup development environment
     cmds:
       - go version
-      - go mod download
-      - go mod verify
+      - go work sync
       - task: tools:install
 
   clean:
@@ -42,176 +43,132 @@ tasks:
     cmds:
       - go clean -cache
       - go clean -testcache
+      - go clean -modcache
 
-  # Testing Tasks
+  # Testing Tasks (Multi-Module)
   test:
-    desc: Run tests for all packages (core functionality)
+    desc: Run tests for all workspace modules
     cmds:
-      - echo "Running tests for core packages..."
-      - go test ./spec/... -v
-      - go test ./nats/core/... -v
-      - go test ./mqtt/... -v
-      - echo "All core package tests passed!"
+      - echo "Running tests for all workspace modules..."
+      - go test -C framework ./...
+      - go test -C components/aws-s3 ./...
+      - go test -C components/mqtt ./...
+      - go test -C components/nats ./...
+      - echo "All workspace tests passed!"
 
   test:all:
-    desc: Run all tests including those with infrastructure issues
+    desc: Run all tests in workspace
     cmds:
-      - echo "Warning - S3 tests may fail due to test infrastructure setup"
-      - go test ./... -v
+      - task: test
 
-  test:short:
-    desc: Run tests for working packages without verbose output
+  test:framework:
+    desc: Run framework tests only
     cmds:
-      - go test ./spec/...
-      - go test ./nats/core/...
-      - go test ./test/...
+      - go test -C framework -v ./...
 
-  test:spec:
-    desc: Run spec package tests only
+  test:aws-s3:
+    desc: Run AWS S3 component tests
     cmds:
-      - go test ./spec/... -v
+      - go test -C components/aws-s3 -v ./...
+
+  test:mqtt:
+    desc: Run MQTT component tests
+    cmds:
+      - go test -C components/mqtt -v ./...
 
   test:nats:
-    desc: Run NATS core tests only
+    desc: Run NATS component tests
     cmds:
-      - go test ./nats/core/... -v
+      - go test -C components/nats -v ./...
 
   test:coverage:
     desc: Run tests with coverage report
     cmds:
-      - go test ./... -coverprofile=coverage.out
-      - go tool cover -html=coverage.out -o coverage.html
-      - echo "Coverage report generated coverage.html"
+      - echo "Running coverage for all modules..."
+      - go test -C framework -coverprofile=framework-coverage.out ./...
+      - go test -C components/aws-s3 -coverprofile=aws-s3-coverage.out ./...
+      - go test -C components/mqtt -coverprofile=mqtt-coverage.out ./...
+      - go test -C components/nats -coverprofile=nats-coverage.out ./...
+      - echo "Coverage reports generated for each module"
 
-  # Build Tasks  
-  build:
-    desc: Build working packages only
+  test:race:
+    desc: Run tests with race detector
     cmds:
-      - echo "Building working packages..."
-      - go build ./spec/...
-      - go build ./nats/core/...
-      - go build ./test/...
-      - echo "All working packages built successfully!"
+      - go test -C framework -race ./...
+      - go test -C components/aws-s3 -race ./...
+      - go test -C components/mqtt -race ./...
+      - go test -C components/nats -race ./...
+
+  # Build Tasks (Multi-Module)
+  build:
+    desc: Build all workspace modules
+    cmds:
+      - echo "Building all workspace modules..."
+      - go build -C framework ./...
+      - go build -C components/aws-s3 ./...
+      - go build -C components/mqtt ./...
+      - go build -C components/nats ./...
+      - echo "All modules built successfully!"
 
   build:all:
-    desc: Attempt to build all packages (may fail on legacy components)
+    desc: Build all workspace modules
     cmds:
-      - echo "Warning - This will fail on legacy components (mqtt, aws/s3)"
-      - go build ./...
+      - task: build
 
   build:check:
-    desc: Check that all packages compile
+    desc: Check that all modules compile
     cmds:
-      - go build -o /dev/null ./...
+      - go build -C framework ./...
+      - go build -C components/aws-s3 ./...
+      - go build -C components/mqtt ./...
+      - go build -C components/nats ./...
 
-  build:working:
-    desc: Check that working packages compile
-    cmds:
-      - go build -o /dev/null ./spec/...
-      - go build -o /dev/null ./nats/core/...
-      - go build -o /dev/null ./test/...
-
-  # Code Quality
+  # Code Quality (Multi-Module)
   lint:
-    desc: Run linting checks
+    desc: Run linting checks on all modules
     deps: [tools:install]
     cmds:
-      - echo "Running basic linting checks..."
-      - go vet ./...
-      - gofmt -l .
-      - echo "Linting completed"
+      - ./scripts/lint.sh
 
   format:
-    desc: Format code
+    desc: Format code in all modules
     cmds:
-      - go fmt ./...
-      - |
-        if command -v goimports >/dev/null 2>&1; then
-          goimports -w .
-        else
-          echo "goimports not found, skipping import formatting"
-        fi
+      - go fmt -C framework ./...
+      - go fmt -C components/aws-s3 ./...
+      - go fmt -C components/mqtt ./...
+      - go fmt -C components/nats ./...
+      - goimports -w ./framework ./components
 
   vet:
-    desc: Run go vet
+    desc: Run go vet on all modules
     cmds:
-      - go vet ./...
+      - go vet -C framework ./...
+      - go vet -C components/aws-s3 ./...
+      - go vet -C components/mqtt ./...
+      - go vet -C components/nats ./...
 
-  # Dependency Management
-  deps:update:
-    desc: Update dependencies
-    cmds:
-      - go get -u ./...
-      - go mod tidy
-
+  # Dependency Management (Workspace)
   deps:tidy:
     desc: Tidy module dependencies
     cmds:
-      - go mod tidy
+      - cd framework && go mod tidy
+      - cd components/aws-s3 && go mod tidy
+      - cd components/mqtt && go mod tidy
+      - cd components/nats && go mod tidy
+      - cd tools && go mod tidy
 
-  # Schema Generation
-  schema:generate:
-    desc: Generate schemas for all components
+  deps:sync:
+    desc: Sync workspace dependencies
     cmds:
-      - task: nats:schema:generate
-
-  nats:schema:generate:
-    desc: Generate NATS schemas
-    dir: ./nats/core
-    cmds:
-      - task models:generate
+      - go work sync
 
   # CI/CD Tasks
   ci:test:
-    desc: Run CI tests for working packages
+    desc: Run CI tests for all modules
     cmds:
       - task: test
-      - task: format
-      - task: vet
-      - task: build:working
-
-  ci:test:all:
-    desc: Run CI tests for all packages (may fail)
-    cmds:
-      - task: test:all
-      - task: format
       - task: vet
       - task: build:check
-
-  # Component Status
-  mqtt:status:
-    desc: Show MQTT component status
-    dir: ./mqtt
-    cmds:
-      - task status
-
-  s3:status:
-    desc: Show S3 component status
-    dir: ./aws/s3
-    cmds:
-      - task status
-
-  # Component Generation
-  generate:component:
-    desc: Generate a new component from templates
-    cmds:
-      - go run scripts/generate-component.go {{.CLI_ARGS}}
-
-  # Advanced Testing
-  test:full:
-    desc: Run comprehensive test suite
-    cmds:
-      - ./scripts/test-runner.sh --ci
-
-  test:integration:
-    desc: Run integration tests
-    cmds:
-      - ./scripts/test-runner.sh --integration
-
-  test:benchmark:
-    desc: Run benchmark tests
-    cmds:
-      - ./scripts/test-runner.sh --benchmark
 
   # Tools Installation
   tools:install:
@@ -220,10 +177,3 @@ tasks:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
       - go install golang.org/x/tools/cmd/goimports@latest
       - go install github.com/atombender/go-jsonschema@84c8d2b98bf0373873df8a353b122530a7110c70
-
-  tools:check:
-    desc: Check if required tools are installed
-    cmds:
-      - which golangci-lint || echo "golangci-lint not found - run 'task tools:install'"
-      - which goimports || echo "goimports not found - run 'task tools:install'"
-      - which go-jsonschema || echo "go-jsonschema not found - run 'task tools:install'"

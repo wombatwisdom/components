@@ -63,11 +63,30 @@ jobs:
         go install golang.org/x/tools/cmd/goimports@latest
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
+    - name: Sync workspace dependencies
+      run: |
+        go work sync
+        go mod tidy -C framework
+        go mod tidy -C components/aws-s3
+        go mod tidy -C components/mqtt
+        go mod tidy -C components/nats
+        go mod tidy -C tools
+
     - name: Download dependencies
-      run: go mod download
+      run: |
+        go mod download -C framework
+        go mod download -C components/aws-s3
+        go mod download -C components/mqtt
+        go mod download -C components/nats
+        go mod download -C tools
 
     - name: Verify dependencies
-      run: go mod verify
+      run: |
+        go mod verify -C framework
+        go mod verify -C components/aws-s3
+        go mod verify -C components/mqtt
+        go mod verify -C components/nats
+        go mod verify -C tools
 
     - name: Run tests
       run: task test
@@ -76,7 +95,11 @@ jobs:
         MQTT_URL: tcp://localhost:1883
 
     - name: Run tests with race detector
-      run: go test -race ./spec/... ./nats/core/... ./test/...
+      run: |
+        go test -C framework -race ./...
+        go test -C components/aws-s3 -race ./...
+        go test -C components/mqtt -race ./...
+        go test -C components/nats -race ./...
 
     - name: Generate test coverage
       run: task test:coverage
@@ -111,10 +134,24 @@ jobs:
         go install golang.org/x/tools/cmd/goimports@latest
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
+    - name: Sync workspace dependencies
+      run: |
+        go work sync
+        go mod tidy -C framework
+        go mod tidy -C components/aws-s3
+        go mod tidy -C components/mqtt
+        go mod tidy -C components/nats
+        go mod tidy -C tools
+
     - name: Run basic linting
       run: |
-        go vet ./...
-        gofmt -l . | tee fmt_issues.txt
+        # Run go vet on each module separately
+        go vet -C framework ./...
+        go vet -C components/aws-s3 ./...
+        go vet -C components/mqtt ./...
+        go vet -C components/nats ./...
+        # Check formatting
+        gofmt -l ./framework ./components | tee fmt_issues.txt
         if [ -s fmt_issues.txt ]; then
           echo "Code formatting issues found:"
           cat fmt_issues.txt
@@ -126,11 +163,16 @@ jobs:
 
     - name: Check formatting
       run: |
-        go fmt ./...
-        goimports -w .
-        if [ -n "$(git diff --exit-code)" ]; then
-          echo "Code is not formatted. Please run 'go fmt' and 'goimports'"
-          git diff
+        # Format each module separately
+        go fmt -C framework ./...
+        go fmt -C components/aws-s3 ./...
+        go fmt -C components/mqtt ./...
+        go fmt -C components/nats ./...
+        goimports -w ./framework ./components
+        # Check for formatting changes (excluding go.mod/go.sum dependency updates)
+        if [ -n "$(git diff --exit-code --name-only | grep -v 'go\.mod$\|go\.sum$')" ]; then
+          echo "Code formatting issues found:"
+          git diff --name-only | grep -v 'go\.mod$\|go\.sum$' | xargs git diff
           exit 1
         fi
 
@@ -157,10 +199,19 @@ jobs:
         go install golang.org/x/tools/cmd/goimports@latest
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
-    - name: Build working packages
+    - name: Sync workspace dependencies
+      run: |
+        go work sync
+        go mod tidy -C framework
+        go mod tidy -C components/aws-s3
+        go mod tidy -C components/mqtt
+        go mod tidy -C components/nats
+        go mod tidy -C tools
+
+    - name: Build all modules
       run: task build
 
-    - name: Check all packages compile
+    - name: Check all modules compile
       run: task build:check
 
   security:
@@ -180,7 +231,7 @@ jobs:
       run: |
         echo "Running basic security checks..."
         # Check for common security issues
-        grep -r "password" --include="*.go" . || echo "No hardcoded passwords found"
-        grep -r "secret" --include="*.go" . || echo "No hardcoded secrets found"
-        grep -r "token" --include="*.go" . || echo "No hardcoded tokens found"
+        grep -r "password" --include="*.go" ./framework ./components || echo "No hardcoded passwords found"
+        grep -r "secret" --include="*.go" ./framework ./components || echo "No hardcoded secrets found"
+        grep -r "token" --include="*.go" ./framework ./components || echo "No hardcoded tokens found"
         echo "Basic security scan completed"

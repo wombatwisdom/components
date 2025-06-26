@@ -1,0 +1,9 @@
+go 1.24
+
+use (
+	./components/aws-s3
+	./components/mqtt
+	./components/nats
+	./framework
+	./tools
+)
