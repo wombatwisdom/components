@@ -70,15 +70,15 @@ jobs:
       run: |
         cd framework && go mod download
         cd ../components/aws-s3 && go mod download
-        cd ../mqtt && go mod download
-        cd ../nats && go mod download
+        cd ../components/mqtt && go mod download
+        cd ../components/nats && go mod download
 
     - name: Verify dependencies
       run: |
         cd framework && go mod verify
         cd ../components/aws-s3 && go mod verify
-        cd ../mqtt && go mod verify
-        cd ../nats && go mod verify
+        cd ../components/mqtt && go mod verify
+        cd ../components/nats && go mod verify
 
     - name: Run tests
       run: task test
