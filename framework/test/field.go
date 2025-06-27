@@ -23,7 +23,7 @@ func (d *dynamicFieldFactory) NewDynamicField(expr string) spec.DynamicField {
 
 	// Remove the ${! and } wrapper to get the actual expression
 	actualExpr := strings.TrimSuffix(strings.TrimPrefix(expr, "${!"), "}")
-	
+
 	parsedExpr, err := d.exprFactory.ParseExpression(actualExpr)
 	if err != nil {
 		// Return constant field on error for simplicity

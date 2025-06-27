@@ -29,7 +29,7 @@ tasks:
       - echo "Quick commands:"
       - echo "  task test       - Run all workspace tests"
       - echo "  task build      - Build all workspace modules"
-      - echo "  task ci:local   - Run complete CI checks locally"
+      - echo "  task ci:test    - Run complete CI checks (matches ci:local)"
       - echo "  task format     - Format all code"
 
   # Development Environment
@@ -152,6 +152,11 @@ tasks:
       - go fmt -C components/nats ./...
       - goimports -w ./framework ./components
 
+  format:check:
+    desc: Check if code is properly formatted
+    cmds:
+      - ./scripts/format-check.sh
+
   vet:
     desc: Run go vet on all modules
     cmds:
@@ -179,11 +184,14 @@ tasks:
 
   # CI/CD Tasks
   ci:test:
-    desc: Run CI tests for all modules
+    desc: Run CI tests for all modules (matches ci:local)
     cmds:
       - task: test
+      - task: test:race
       - task: vet
       - task: build:check
+      - task: lint
+      - task: format:check
 
   ci:local:
     desc: Run complete CI checks locally (matches GitHub Actions)

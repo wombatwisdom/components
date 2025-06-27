@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	github.com/expr-lang/expr v1.17.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
