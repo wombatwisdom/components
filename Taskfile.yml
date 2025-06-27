@@ -27,9 +27,10 @@ tasks:
       - echo "  - tools/ - Build scripts and templates"
       - echo ""
       - echo "Quick commands:"
-      - echo "  task test:all   - Run all workspace tests"
-      - echo "  task build:all  - Build all workspace modules"
-      - echo "  task lint:all   - Lint all workspace modules"
+      - echo "  task test       - Run all workspace tests"
+      - echo "  task build      - Build all workspace modules"
+      - echo "  task ci:local   - Run complete CI checks locally"
+      - echo "  task format     - Format all code"
 
   # Development Environment
   setup:
@@ -183,6 +184,12 @@ tasks:
       - task: test
       - task: vet
       - task: build:check
+
+  ci:local:
+    desc: Run complete CI checks locally (matches GitHub Actions)
+    cmds:
+      - echo "🚀 Running complete CI checks locally..."
+      - ./scripts/ci-local.sh
 
   # Tools Installation
   tools:install:
