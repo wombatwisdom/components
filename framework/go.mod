@@ -7,7 +7,6 @@ require (
 	github.com/google/cel-go v0.22.1
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
-	github.com/wombatwisdom/components v0.0.0-20250625183750-c649cf3cfcbb
 	gopkg.in/yaml.v3 v3.0.1
 )
 
