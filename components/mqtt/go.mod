@@ -1,6 +1,8 @@
 module github.com/wombatwisdom/components/mqtt
 
-go 1.24
+go 1.24.1
+
+toolchain go1.24.4
 
 replace github.com/wombatwisdom/components/framework => ../../framework
 
