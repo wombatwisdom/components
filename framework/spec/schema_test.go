@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/wombatwisdom/components/spec"
+	"github.com/wombatwisdom/components/framework/spec"
 )
 
 var _ = Describe("ConfigSchema", func() {

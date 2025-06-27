@@ -8,7 +8,19 @@ import (
 	"github.com/wombatwisdom/components/framework/spec"
 )
 
-// NewTriggerInput creates a new EventBridge trigger input component
+// NewTriggerInput creates a new EventBridge trigger input component.
+//
+// This component implements the trigger-retrieval pattern by listening for
+// EventBridge events (typically S3 object creation notifications) and emitting
+// lightweight trigger events that reference the data location without fetching it.
+//
+// Supported modes:
+//   - SQS: Uses EventBridge Rules to route events to SQS, then polls SQS
+//   - Pipes: Uses EventBridge Pipes for direct streaming integration
+//   - Simulation: Generates fake events for testing purposes
+//
+// The component validates configuration and initializes the appropriate
+// integration mode based on the provided config.
 func NewTriggerInput(ctx spec.ComponentContext, config TriggerInputConfig) (*TriggerInput, error) {
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
