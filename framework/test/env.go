@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"net"
 
-	"github.com/google/cel-go/cel"
-	"github.com/onsi/gomega"
 	"github.com/wombatwisdom/components/framework/spec"
 )
 
@@ -28,14 +26,11 @@ func (e *environment) GetBool(key string) bool {
 }
 
 func TestEnvironment() spec.Environment {
-	env, err := cel.NewEnv(
-		cel.Variable("this", cel.AnyType),
-	)
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	exprFactory := spec.NewExprLangExpressionFactory()
 
 	return &environment{
 		Logger:              &logger{slog.Default()},
-		DynamicFieldFactory: &dynamicFieldFactory{env: env},
+		DynamicFieldFactory: &dynamicFieldFactory{exprFactory: exprFactory},
 	}
 }
 

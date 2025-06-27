@@ -5,12 +5,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/google/cel-go/cel"
 	"github.com/wombatwisdom/components/framework/spec"
 )
 
 type dynamicFieldFactory struct {
-	env *cel.Env
+	exprFactory spec.ExpressionFactory
 }
 
 func (d *dynamicFieldFactory) NewDynamicField(expr string) spec.DynamicField {
@@ -22,19 +21,16 @@ func (d *dynamicFieldFactory) NewDynamicField(expr string) spec.DynamicField {
 		return &constantField{value: expr}
 	}
 
-	ast, issues := d.env.Compile(expr)
-	if issues != nil && issues.Err() != nil {
-		// Return constant field on error for simplicity
-		return &constantField{value: expr}
-	}
-
-	prg, err := d.env.Program(ast)
+	// Remove the ${! and } wrapper to get the actual expression
+	actualExpr := strings.TrimSuffix(strings.TrimPrefix(expr, "${!"), "}")
+	
+	parsedExpr, err := d.exprFactory.ParseExpression(actualExpr)
 	if err != nil {
 		// Return constant field on error for simplicity
 		return &constantField{value: expr}
 	}
 
-	return &dynamicField{expr: prg}
+	return &dynamicField{expr: parsedExpr}
 }
 
 type constantField struct {
@@ -62,7 +58,7 @@ func (c *constantField) AsBool(_ spec.Message) (bool, error) {
 }
 
 type dynamicField struct {
-	expr cel.Program
+	expr spec.Expression
 }
 
 func (d *dynamicField) String() string {
@@ -119,9 +115,27 @@ func (d *dynamicField) AsAny(msg spec.Message) (any, error) {
 		return nil, nil
 	}
 
-	res, _, err := d.expr.Eval(map[string]interface{}{
-		"this": msg,
-	})
+	// Create expression context from message
+	ctx := spec.MessageExpressionContext(msg)
+	ctx["this"] = msg
 
-	return res, fmt.Errorf("evaluation error: %s", err)
+	// Try to evaluate as string first, then fallback to other types
+	result, err := d.expr.EvalString(ctx)
+	if err == nil {
+		return result, nil
+	}
+
+	// Try as bool
+	boolResult, boolErr := d.expr.EvalBool(ctx)
+	if boolErr == nil {
+		return boolResult, nil
+	}
+
+	// Try as int
+	intResult, intErr := d.expr.EvalInt(ctx)
+	if intErr == nil {
+		return intResult, nil
+	}
+
+	return nil, fmt.Errorf("evaluation error: %s", err)
 }
