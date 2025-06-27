@@ -156,32 +156,12 @@ jobs:
         go vet -C components/eventbridge ./...
         go vet -C components/mqtt ./...
         go vet -C components/nats ./...
-        # Check formatting
-        gofmt -l ./framework ./components | tee fmt_issues.txt
-        if [ -s fmt_issues.txt ]; then
-          echo "Code formatting issues found:"
-          cat fmt_issues.txt
-          exit 1
-        fi
 
     - name: Run go vet
       run: task vet
 
     - name: Check formatting
-      run: |
-        # Format each module separately
-        go fmt -C framework ./...
-        go fmt -C components/aws-s3 ./...
-        go fmt -C components/eventbridge ./...
-        go fmt -C components/mqtt ./...
-        go fmt -C components/nats ./...
-        goimports -w ./framework ./components
-        # Check for formatting changes (excluding go.mod/go.sum dependency updates)
-        if [ -n "$(git diff --exit-code --name-only | grep -v 'go\.mod$\|go\.sum$')" ]; then
-          echo "Code formatting issues found:"
-          git diff --name-only | grep -v 'go\.mod$\|go\.sum$' | xargs git diff
-          exit 1
-        fi
+      run: task format:check
 
   build:
     name: Build
