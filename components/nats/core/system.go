@@ -1,4 +1,4 @@
-package nats
+package core
 
 import (
 	"context"

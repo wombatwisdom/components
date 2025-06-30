@@ -1,4 +1,4 @@
-package nats
+package core
 
 import (
 	"fmt"
@@ -16,6 +16,15 @@ func NewOutput(sys spec.System, cfg OutputConfig) *Output {
 		sys: sys,
 		cfg: cfg,
 	}
+}
+
+// NewOutputFromConfig creates an output from a spec.Config interface
+func NewOutputFromConfig(sys spec.System, config spec.Config) (*Output, error) {
+	var cfg OutputConfig
+	if err := config.Decode(&cfg); err != nil {
+		return nil, err
+	}
+	return NewOutput(sys, cfg), nil
 }
 
 // Output sends messages to a NATS subject.

@@ -1,4 +1,4 @@
-package nats
+package core
 
 import (
 	"fmt"
@@ -22,6 +22,11 @@ func NewInput(sys spec.System, rawConfig spec.Config) (*Input, error) {
 		sys: sys,
 		cfg: cfg,
 	}, nil
+}
+
+// NewInputFromConfig creates an input from a spec.Config interface
+func NewInputFromConfig(sys spec.System, config spec.Config) (*Input, error) {
+	return NewInput(sys, config)
 }
 
 // Input receives messages from a NATS subject.
