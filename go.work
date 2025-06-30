@@ -5,6 +5,7 @@ toolchain go1.24.4
 use (
 	./components/aws-s3
 	./components/eventbridge
+	./components/mq
 	./components/mqtt
 	./components/nats
 	./framework

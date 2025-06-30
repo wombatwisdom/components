@@ -27,7 +27,8 @@ packagename/
 ├── output.go          # Implements spec.Output, writes messages  
 ├── *_config.go        # Generated from schema files
 ├── *.schema.yaml      # JSON schema definitions
-└── *_test.go          # Tests using Ginkgo/Gomega
+├── *_test.go          # Tests using Ginkgo/Gomega
+└── README.md          # A readme explaining the details of the system and how to use it.
 ```
 
 ## Development Commands
