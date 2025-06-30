@@ -46,7 +46,7 @@ coverage.html
 *.local.json
 
 # Claude AI settings
-.claude/
+.claude/settings.local.json
 
 # Generated files
 *_config.go
