@@ -1,4 +1,4 @@
-package nats_test
+package core_test
 
 import (
 	"testing"

@@ -1,4 +1,4 @@
-package nats_test
+package core_test
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/wombatwisdom/components/framework/spec"
-	natscomp "github.com/wombatwisdom/components/nats"
+	"github.com/wombatwisdom/components/nats/core"
 )
 
 var _ = Describe("System", func() {
@@ -20,7 +20,7 @@ auth:
   seed: ##seed##
 `)
 
-			system, err := natscomp.NewSystemFromConfig(config)
+			system, err := core.NewSystemFromConfig(config)
 			Expect(err).To(HaveOccurred())
 			Expect(system).To(BeNil())
 		})
@@ -38,7 +38,7 @@ auth:
 				"##jwt##", "invalid_seed",
 				"##seed##", "invalid_jwt")
 
-			system, err := natscomp.NewSystemFromConfig(config)
+			system, err := core.NewSystemFromConfig(config)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(system).ToNot(BeNil())
 
@@ -57,7 +57,7 @@ auth:
   seed: ##seed##
 `, "##url##", srv.ClientURL(), "##jwt##", jwt, "##seed##", string(seed))
 
-			system, err := natscomp.NewSystemFromConfig(config)
+			system, err := core.NewSystemFromConfig(config)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(system).ToNot(BeNil())
 

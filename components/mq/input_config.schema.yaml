@@ -1,0 +1,44 @@
+$id: dev.wombat.component.mq.input.config
+title: InputConfig
+type: object
+properties:
+  queue_name:
+    type: string
+    description: >
+      The IBM MQ queue name to read messages from.
+    example: TEST_IN
+  wait_time:
+    type: string
+    description: >
+      How long to wait for messages when the queue is empty.
+      Specify as a duration string (e.g., "5s", "1m", "100ms").
+    default: 5s
+  sleep_time_before_exit_after_failure:
+    type: string
+    description: >
+      How long to wait before program exit after failure.
+      This provides time for graceful shutdown and cleanup.
+      Specify as a duration string (e.g., "2m", "30s").
+    default: 2m
+  batch_count:
+    type: integer
+    description: >
+      The maximum number of messages to fetch at a time.
+      Processing guarantees apply to the batch, not individual messages.
+      Higher values can improve throughput but increase memory usage.
+    default: 1
+    minimum: 1
+  num_threads:
+    type: integer
+    description: >
+      Number of parallel queue manager connections to use.
+      Higher values can improve throughput for high-volume queues.
+    default: 1
+    minimum: 1
+  auto_retry_nacks:
+    type: boolean
+    description: >
+      Whether to automatically retry processing of failed messages.
+    default: true
+required:
+  - queue_name
