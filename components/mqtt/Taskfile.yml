@@ -1,5 +1,7 @@
 version: "3"
 
+silent: true
+
 tasks:
   test:
     desc: Run MQTT component tests
