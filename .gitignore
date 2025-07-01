@@ -53,6 +53,7 @@ coverage.html
 !system_config.go
 !input_config.go 
 !output_config.go
+!nats_stream_config.go
 
 # Temporary files
 tmp/
