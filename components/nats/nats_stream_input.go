@@ -67,15 +67,15 @@ func (si *StreamInput) Init(ctx spec.ComponentContext) error {
 		return fmt.Errorf("failed to parse subject expression: %w", err)
 	}
 
-	if si.cfg.Consumer != nil && si.cfg.Consumer.FilterSubject != "" {
-		si.filterSubject, err = ctx.ParseExpression(si.cfg.Consumer.FilterSubject)
+	if si.cfg.Consumer != nil && si.cfg.Consumer.FilterSubject != nil && *si.cfg.Consumer.FilterSubject != "" {
+		si.filterSubject, err = ctx.ParseExpression(*si.cfg.Consumer.FilterSubject)
 		if err != nil {
 			return fmt.Errorf("failed to parse filter subject expression: %w", err)
 		}
 	}
 
-	if si.cfg.Consumer != nil && si.cfg.Consumer.Name != "" {
-		si.consumerName, err = ctx.ParseExpression(si.cfg.Consumer.Name)
+	if si.cfg.Consumer != nil && si.cfg.Consumer.Name != nil && *si.cfg.Consumer.Name != "" {
+		si.consumerName, err = ctx.ParseExpression(*si.cfg.Consumer.Name)
 		if err != nil {
 			return fmt.Errorf("failed to parse consumer name expression: %w", err)
 		}
