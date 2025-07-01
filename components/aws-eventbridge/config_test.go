@@ -1,9 +1,9 @@
-package eventbridge_test
+package aws_eventbridge_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/wombatwisdom/components/eventbridge"
+	eventbridge "github.com/wombatwisdom/components/eventbridge"
 )
 
 var _ = Describe("TriggerInputConfig", func() {

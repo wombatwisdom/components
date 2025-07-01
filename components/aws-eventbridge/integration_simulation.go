@@ -1,4 +1,4 @@
-package eventbridge
+package aws_eventbridge
 
 import (
 	"context"

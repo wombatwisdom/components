@@ -2,30 +2,39 @@ version: "3"
 
 silent: true
 
+vars:
+  SHOW_PROGRESS: "true"
+
+includes:
+  common:
+    taskfile: ../_common/Taskfile.yml
+
 tasks:
+  validate:
+    desc: Validate the component
+    cmds:
+      - task: common:validate
+        vars:
+          SHOW_PROGRESS: "{{.SHOW_PROGRESS}}"
+  
   test:
-    desc: Run AWS S3 component tests
+    desc: Run component tests
     cmds:
-      - go test ./... -v
+      - task: common:test
 
+  test:coverage:
+    desc: Run component tests with coverage
+    cmds:
+      - task: common:test:coverage
+
+  test:race:
+    desc: Run component tests with race detector
+    cmds:
+      - task: common:test:race
+      
   build:
-    desc: Build AWS S3 component
+    desc: Build the component
     cmds:
-      - go build ./...
-
-  lint:
-    desc: Lint AWS S3 component
-    cmds:
-      - go vet ./...
-      - gofmt -l .
-
-  format:
-    desc: Format AWS S3 component code
-    cmds:
-      - go fmt ./...
-      - goimports -w . || echo "goimports not available"
-
-  deps:tidy:
-    desc: Tidy dependencies
-    cmds:
-      - go mod tidy
+      - task: common:build
+        vars:
+          SHOW_PROGRESS: "{{.SHOW_PROGRESS}}"

@@ -1,0 +1,45 @@
+version: "3"
+
+silent: true
+
+vars:
+  # Whether to show progress messages
+  SHOW_PROGRESS: "false"
+
+tasks:
+  # No-op generate task - components with code generation should override this
+  generate:
+    internal: true
+    cmds:
+      - echo > /dev/null
+
+  validate:
+    desc: Validate the component
+    cmds:
+      - task: generate
+      - go fmt ./...
+      - goimports -w .
+      - go vet ./...
+      - go mod tidy
+
+  test:
+    desc: Run component tests
+    cmds:
+      - go test ./... -v
+
+  test:coverage:
+    desc: Run component tests with coverage
+    cmds:
+      - go test ./... -v -coverprofile=coverage.out
+
+  test:race:
+    desc: Run component tests with race detector
+    cmds:
+      - go test -race ./...
+
+  build:
+    desc: Build the component
+    cmds:
+      - task: generate
+      - go mod tidy
+      - go build ./...

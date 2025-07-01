@@ -1,0 +1,72 @@
+version: "3"
+
+silent: true
+
+vars:
+  COMPONENTS:
+    - "aws-eventbridge"
+    - "aws-s3"
+    - "ibm-mq"
+    - "mqtt"
+    - "nats"
+
+includes:
+  aws-eventbridge:
+    taskfile: ./aws-eventbridge/Taskfile.yml
+    dir: ./aws-eventbridge
+  aws-s3:
+    taskfile: ./aws-s3/Taskfile.yml
+    dir: ./aws-s3
+  ibm-mq:
+    taskfile: ./ibm-mq/Taskfile.yml
+    dir: ./ibm-mq
+  mqtt:
+    taskfile: ./mqtt/Taskfile.yml
+    dir: ./mqtt
+  nats:
+    taskfile: ./nats/Taskfile.yml
+    dir: ./nats
+    
+tasks:
+
+  validate:
+    desc: Validate a component
+    required:
+      vars:
+        - COMPONENT
+    cmds:
+      - 'echo "Validating component: {{.COMPONENT}}"'
+      - task: '{{.COMPONENT}}:validate'
+  
+  all:validate:
+    desc: Validate the components
+    cmds:
+      - for: { var: COMPONENTS, as: COMPONENT }
+        task: validate
+        vars:
+          COMPONENT: '{{.COMPONENT}}'
+        
+  all:build:
+    desc: Build all components
+    cmds:
+      - for: { var: COMPONENTS }
+        task: '{{.ITEM}}:build'
+
+  all:test:
+    desc: Run component tests
+    cmds:
+      - for: { var: COMPONENTS }
+        task: '{{.ITEM}}:test'
+
+  all:test:coverage:
+    desc: Run component tests with coverage
+    cmds:
+      - for: { var: COMPONENTS }
+        task: '{{.ITEM}}:test:coverage'
+        
+
+  all:test:race:
+    desc: Run component tests with race detector
+    cmds:
+      - for: { var: COMPONENTS }
+        task: '{{.ITEM}}:test:race'

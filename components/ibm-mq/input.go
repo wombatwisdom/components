@@ -1,6 +1,6 @@
 //go:build mqclient
 
-package mq
+package ibm_mq
 
 import (
 	"errors"

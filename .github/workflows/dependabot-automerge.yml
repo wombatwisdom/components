@@ -17,15 +17,23 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.23
+        go-version: 1.24
 
     - name: Install Task
       uses: arduino/setup-task@v2
       with:
         version: 3.x
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Run tests
-      run: task ci:test
+    - name: Setup development environment
+      run: |
+        task setup
+        echo "$HOME/go/bin" >> $GITHUB_PATH
+
+    - name: Validate and test all modules
+      run: |
+        task validate
+        task test
 
     - name: Auto-merge
       if: success()

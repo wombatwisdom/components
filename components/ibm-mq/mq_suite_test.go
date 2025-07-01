@@ -1,4 +1,4 @@
-package mq_test
+package ibm_mq_test
 
 import (
 	"testing"

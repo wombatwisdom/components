@@ -3,13 +3,13 @@ version: "3"
 silent: true
 
 vars:
-  COMPONENT_NAME: "nats"
-  # Schema mappings - more maintainable format but internally converted to string
+  COMPONENT_NAME: "ibm_mq"
+  # Schema mappings - more maintainable format
   SCHEMA_MAPPINGS_LIST:
-    - "dev.wombat.component.nats.core.system.config=./system_config.go"
-    - "dev.wombat.component.nats.core.input.config=./input_config.go"
-    - "dev.wombat.component.nats.core.output.config=./output_config.go"
-  SHOW_PROGRESS: "false"
+    - "dev.wombat.component.ibm_mq.system.config=./system_config.go"
+    - "dev.wombat.component.ibm_mq.input.config=./input_config.go"
+    - "dev.wombat.component.ibm_mq.output.config=./output_config.go"
+  SHOW_PROGRESS: "true"
 
 includes:
   common:

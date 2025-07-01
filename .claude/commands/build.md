@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(task)
+allowed-tools: Bash(task ci:test), Bash(task build)
 description: Build the project
 ---
 

@@ -1,4 +1,4 @@
-package eventbridge_test
+package aws_eventbridge_test
 
 import (
 	"testing"
