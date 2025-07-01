@@ -1,0 +1,114 @@
+$id: dev.wombat.component.nats.stream.config
+title: StreamConfig
+type: object
+properties:
+  stream:
+    type: string
+    description: >
+      The name of the JetStream stream to consume from or publish to.
+      This can be an expression that is evaluated for each message.
+    examples:
+      - events
+      - "logs.{{ .level }}"
+  subject:
+    type: string
+    description: >
+      The subject pattern for the stream. For inputs, this is used to filter
+      messages from the stream. For outputs, this is the subject to publish to.
+      This can be an expression that is evaluated for each message.
+    examples:
+      - "events.>"
+      - "logs.{{ .level }}.{{ .service }}"
+  consumer:
+    type: object
+    description: >
+      Consumer configuration for input components. Only applies to inputs.
+    properties:
+      name:
+        type: string
+        description: >
+          The name of the consumer. If not provided, an ephemeral consumer will be created.
+        examples:
+          - processor-1
+          - "{{ .instance_id }}"
+      durable:
+        type: boolean
+        description: >
+          Whether to create a durable consumer. If true, the consumer will persist
+          across restarts and continue from where it left off.
+        default: false
+      filter_subject:
+        type: string
+        description: >
+          Additional subject filter for the consumer. If provided, the consumer
+          will only receive messages matching this subject pattern.
+        examples:
+          - "events.user.*"
+          - "logs.error.>"
+      deliver_policy:
+        type: string
+        enum: ["all", "last", "new"]
+        description: >
+          The delivery policy for the consumer.
+          - all: Deliver all messages in the stream
+          - last: Deliver only the last message per subject
+          - new: Deliver only new messages (from now)
+        default: new
+      ack_policy:
+        type: string
+        enum: ["none", "all", "explicit"]
+        description: >
+          The acknowledgment policy for the consumer.
+          - none: No acknowledgment required
+          - all: Acknowledge all messages in order
+          - explicit: Acknowledge each message individually
+        default: explicit
+      max_deliver:
+        type: integer
+        description: >
+          Maximum number of delivery attempts for a message.
+          After this many attempts, the message will be considered failed.
+        default: 5
+        minimum: 1
+      ack_wait:
+        type: string
+        description: >
+          Time to wait for acknowledgment before redelivering a message.
+          Use Go duration format (e.g., "30s", "5m", "1h").
+        default: "30s"
+        examples:
+          - "30s"
+          - "5m"
+          - "1h"
+  batch_size:
+    type: integer
+    description: >
+      Number of messages to fetch in a single batch. Only applies to inputs.
+      Higher values can improve throughput but increase memory usage.
+    default: 1
+    minimum: 1
+    maximum: 1000
+  metadata:
+    type: object
+    description: >
+      Metadata handling configuration.
+    properties:
+      include_stream_info:
+        type: boolean
+        description: >
+          Include JetStream metadata in message headers.
+          This adds headers like stream name, sequence number, and timestamp.
+        default: true
+      filter:
+        type: array
+        description: >
+          List of metadata keys to include. If empty, all metadata is included.
+          Use this to limit which headers are propagated to avoid noise.
+        items:
+          type: string
+        examples:
+          - ["stream", "sequence", "timestamp"]
+          - ["subject", "reply"]
+required:
+  - stream
+  - subject

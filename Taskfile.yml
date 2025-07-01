@@ -1,7 +1,17 @@
 version: "3"
 
+silent: true
+
 vars:
   GO_MODULE: github.com/wombatwisdom/components
+
+includes:
+  components:
+    taskfile: ./components/Taskfile.yml
+    dir: ./components
+  framework:
+    taskfile: ./framework/Taskfile.yml 
+    dir: ./framework
 
 tasks:
   default:
@@ -9,200 +19,47 @@ tasks:
     cmds:
       - task --list-all
 
-  status:
-    desc: Show project status
-    cmds:
-      - echo "WombatWisdom Components Status (Go Workspace):"
-      - echo ""
-      - echo "Framework module:"
-      - echo "  - framework/ - Core interfaces and utilities"
-      - echo ""
-      - echo "Component modules:"
-      - echo "  - components/aws-s3/ - AWS S3 Input component"
-      - echo "  - components/eventbridge/ - EventBridge Trigger Input component"
-      - echo "  - components/mqtt/ - MQTT Input/Output components"  
-      - echo "  - components/nats/ - NATS Input/Output components"
-      - echo ""
-      - echo "Tools:"
-      - echo "  - tools/ - Build scripts and templates"
-      - echo ""
-      - echo "Quick commands:"
-      - echo "  task test       - Run all workspace tests"
-      - echo "  task build      - Build all workspace modules"
-      - echo "  task ci:test    - Run complete CI checks (matches ci:local)"
-      - echo "  task format     - Format all code"
-
   # Development Environment
   setup:
     desc: Setup development environment
     cmds:
       - go version
       - go work sync
-      - task: tools:install
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      - go install golang.org/x/tools/cmd/goimports@latest
+      - go install github.com/atombender/go-jsonschema@84c8d2b98bf0373873df8a353b122530a7110c70
 
-  clean:
-    desc: Clean build artifacts and caches
-    cmds:
-      - go clean -cache
-      - go clean -testcache
-      - go clean -modcache
-
-  # Testing Tasks (Multi-Module)
   test:
-    desc: Run tests for all workspace modules
-    cmds:
-      - echo "Running tests for all workspace modules..."
-      - go test -C framework ./...
-      - go test -C components/aws-s3 ./...
-      - go test -C components/eventbridge ./...
-      - go test -C components/mqtt ./...
-      - go test -C components/nats ./...
-      - echo "All workspace tests passed!"
-
-  test:all:
     desc: Run all tests in workspace
     cmds:
-      - task: test
-
-  test:framework:
-    desc: Run framework tests only
-    cmds:
-      - go test -C framework -v ./...
-
-  test:aws-s3:
-    desc: Run AWS S3 component tests
-    cmds:
-      - go test -C components/aws-s3 -v ./...
-
-  test:mqtt:
-    desc: Run MQTT component tests
-    cmds:
-      - go test -C components/mqtt -v ./...
-
-  test:eventbridge:
-    desc: Run EventBridge component tests
-    cmds:
-      - go test -C components/eventbridge -v ./...
-
-  test:nats:
-    desc: Run NATS component tests
-    cmds:
-      - go test -C components/nats -v ./...
+      - task: framework:test
+      - task: components:all:test
 
   test:coverage:
     desc: Run tests with coverage report
     cmds:
-      - echo "Running coverage for all modules..."
-      - go test -C framework -coverprofile=framework-coverage.out ./...
-      - go test -C components/aws-s3 -coverprofile=aws-s3-coverage.out ./...
-      - go test -C components/eventbridge -coverprofile=eventbridge-coverage.out ./...
-      - go test -C components/mqtt -coverprofile=mqtt-coverage.out ./...
-      - go test -C components/nats -coverprofile=nats-coverage.out ./...
-      - echo "Coverage reports generated for each module"
+      - task: framework:test:coverage
+      - task: components:all:test:coverage
 
   test:race:
     desc: Run tests with race detector
     cmds:
-      - go test -C framework -race ./...
-      - go test -C components/aws-s3 -race ./...
-      - go test -C components/eventbridge -race ./...
-      - go test -C components/mqtt -race ./...
-      - go test -C components/nats -race ./...
+      - task: framework:test:race
+      - task: components:all:test:race
 
-  # Build Tasks (Multi-Module)
+  validate:
+    desc: Validate all modules
+    cmds:
+      - task: framework:validate
+      - task: components:all:validate
+        
   build:
-    desc: Build all workspace modules
+    desc: build all workspace modules
     cmds:
-      - echo "Building all workspace modules..."
-      - go build -C framework ./...
-      - go build -C components/aws-s3 ./...
-      - go build -C components/eventbridge ./...
-      - go build -C components/mqtt ./...
-      - go build -C components/nats ./...
-      - echo "All modules built successfully!"
-
-  build:all:
-    desc: Build all workspace modules
-    cmds:
-      - task: build
-
-  build:check:
-    desc: Check that all modules compile
-    cmds:
-      - go build -C framework ./...
-      - go build -C components/aws-s3 ./...
-      - go build -C components/eventbridge ./...
-      - go build -C components/mqtt ./...
-      - go build -C components/nats ./...
-
-  # Code Quality (Multi-Module)
-  lint:
-    desc: Run linting checks on all modules
-    deps: [tools:install]
-    cmds:
-      - ./scripts/lint.sh
-
-  format:
-    desc: Format code in all modules
-    cmds:
-      - go fmt -C framework ./...
-      - go fmt -C components/aws-s3 ./...
-      - go fmt -C components/eventbridge ./...
-      - go fmt -C components/mqtt ./...
-      - go fmt -C components/nats ./...
-      - goimports -w ./framework ./components
-
-  format:check:
-    desc: Check if code is properly formatted
-    cmds:
-      - ./scripts/format-check.sh
-
-  vet:
-    desc: Run go vet on all modules
-    cmds:
-      - go vet -C framework ./...
-      - go vet -C components/aws-s3 ./...
-      - go vet -C components/eventbridge ./...
-      - go vet -C components/mqtt ./...
-      - go vet -C components/nats ./...
-
-  # Dependency Management (Workspace)
-  deps:tidy:
-    desc: Tidy module dependencies
-    cmds:
-      - cd framework && go mod tidy
-      - cd components/aws-s3 && go mod tidy
-      - cd components/eventbridge && go mod tidy
-      - cd components/mqtt && go mod tidy
-      - cd components/nats && go mod tidy
-      - cd tools && go mod tidy
+      - task: framework:build
+      - task: components:all:build
 
   deps:sync:
     desc: Sync workspace dependencies
     cmds:
       - go work sync
-
-  # CI/CD Tasks
-  ci:test:
-    desc: Run CI tests for all modules (matches ci:local)
-    cmds:
-      - task: test
-      - task: test:race
-      - task: vet
-      - task: build:check
-      - task: lint
-      - task: format:check
-
-  ci:local:
-    desc: Run complete CI checks locally (matches GitHub Actions)
-    cmds:
-      - echo "🚀 Running complete CI checks locally..."
-      - ./scripts/ci-local.sh
-
-  # Tools Installation
-  tools:install:
-    desc: Install development tools
-    cmds:
-      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-      - go install golang.org/x/tools/cmd/goimports@latest
-      - go install github.com/atombender/go-jsonschema@84c8d2b98bf0373873df8a353b122530a7110c70

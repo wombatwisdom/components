@@ -1,0 +1,38 @@
+version: "3"
+
+silent: true
+
+tasks:
+  validate:
+    desc: Validate the framework
+    cmds:
+      - 'echo "📝 Formatting Go code..."'
+      - go fmt ./...
+      - 'echo "📦 Running goimports..."'
+      - goimports -w .
+      - 'echo "🔍 Running go vet..."'
+      - go vet ./...
+      - 'echo "📋 Tidying modules..."'
+      - go mod tidy
+      - 'echo "✅ All checks passed!"'
+  
+  test:
+    desc: Run framework tests
+    cmds:
+      - go test ./... -v
+
+  test:coverage:
+    desc: Run framework tests with coverage
+    cmds:
+      - go test ./... -v -coverprofile=coverage.out
+
+  test:race:
+    desc: Run framework tests with race detector
+    cmds:
+      - go test -race ./...
+        
+  build:
+    desc: Build the framework
+    cmds:
+      - go mod tidy
+      - go build  ./...

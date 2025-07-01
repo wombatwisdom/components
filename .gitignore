@@ -46,13 +46,14 @@ coverage.html
 *.local.json
 
 # Claude AI settings
-.claude/
+.claude/settings.local.json
 
 # Generated files
 *_config.go
 !system_config.go
 !input_config.go 
 !output_config.go
+!nats_stream_config.go
 
 # Temporary files
 tmp/
