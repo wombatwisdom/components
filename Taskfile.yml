@@ -134,7 +134,6 @@ tasks:
 
   release:tag:
     desc: Create and push tags for all components
-    internal: true
     requires:
       vars: [VERSION]
     cmds:
@@ -160,7 +159,6 @@ tasks:
 
   release:check:
     desc: Pre-release checks
-    internal: true
     cmds:
       - |
         # Check for uncommitted changes
