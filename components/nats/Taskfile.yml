@@ -58,3 +58,13 @@ tasks:
       - task: common:build
         vars:
           COMPONENT_NAME: "{{.COMPONENT_NAME}}"
+
+  vet:
+    desc: Run go vet on component
+    cmds:
+      - task: common:vet
+
+  format:
+    desc: Format component Go code
+    cmds:
+      - task: common:format

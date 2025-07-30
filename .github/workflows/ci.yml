@@ -49,7 +49,7 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-1.24-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-1.24-${{ hashFiles('go.work.sum', '**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-1.24-
 
@@ -79,7 +79,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.out
+        files: ./coverage.out
         flags: unittests
         name: codecov-umbrella
 

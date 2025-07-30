@@ -39,7 +39,8 @@ print_status "Step 1: Sync workspace dependencies"
 go work sync
 go mod tidy -C framework
 go mod tidy -C components/aws-s3
-go mod tidy -C components/eventbridge
+go mod tidy -C components/aws-eventbridge
+go mod tidy -C components/ibm-mq
 go mod tidy -C components/mqtt
 go mod tidy -C components/nats
 go mod tidy -C tools
@@ -48,14 +49,16 @@ print_success "Dependencies synced"
 print_status "Step 2: Download and verify dependencies"
 go mod download -C framework
 go mod download -C components/aws-s3
-go mod download -C components/eventbridge
+go mod download -C components/aws-eventbridge
+go mod download -C components/ibm-mq
 go mod download -C components/mqtt
 go mod download -C components/nats
 go mod download -C tools
 
 go mod verify -C framework
 go mod verify -C components/aws-s3
-go mod verify -C components/eventbridge
+go mod verify -C components/aws-eventbridge
+go mod verify -C components/ibm-mq
 go mod verify -C components/mqtt
 go mod verify -C components/nats
 go mod verify -C tools
@@ -68,7 +71,8 @@ print_success "Tests passed"
 print_status "Step 4: Run tests with race detector"
 go test -C framework -race ./...
 go test -C components/aws-s3 -race ./...
-go test -C components/eventbridge -race ./...
+go test -C components/aws-eventbridge -race ./...
+go test -C components/ibm-mq -race ./...
 go test -C components/mqtt -race ./...
 go test -C components/nats -race ./...
 print_success "Race detector tests passed"

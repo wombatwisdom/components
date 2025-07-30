@@ -36,3 +36,14 @@ tasks:
     cmds:
       - go mod tidy
       - go build  ./...
+
+  vet:
+    desc: Run go vet on framework
+    cmds:
+      - go vet ./...
+
+  format:
+    desc: Format framework Go code
+    cmds:
+      - go fmt ./...
+      - goimports -w .

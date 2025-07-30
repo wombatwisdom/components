@@ -70,3 +70,15 @@ tasks:
     cmds:
       - for: { var: COMPONENTS }
         task: '{{.ITEM}}:test:race'
+
+  all:vet:
+    desc: Run go vet on all components
+    cmds:
+      - for: { var: COMPONENTS }
+        task: '{{.ITEM}}:vet'
+
+  all:format:
+    desc: Format all component Go code
+    cmds:
+      - for: { var: COMPONENTS }
+        task: '{{.ITEM}}:format'

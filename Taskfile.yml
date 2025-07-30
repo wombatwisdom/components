@@ -63,3 +63,20 @@ tasks:
     desc: Sync workspace dependencies
     cmds:
       - go work sync
+
+  vet:
+    desc: Run go vet on all modules
+    cmds:
+      - task: framework:vet
+      - task: components:all:vet
+
+  format:
+    desc: Format all Go code
+    cmds:
+      - task: framework:format
+      - task: components:all:format
+
+  build:check:
+    desc: Check that all modules build successfully
+    cmds:
+      - task: build

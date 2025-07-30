@@ -36,5 +36,13 @@ tasks:
     desc: Build the component
     cmds:
       - task: common:build
-        vars:
-          SHOW_PROGRESS: "{{.SHOW_PROGRESS}}"
+
+  vet:
+    desc: Run go vet on component
+    cmds:
+      - task: common:vet
+
+  format:
+    desc: Format component Go code
+    cmds:
+      - task: common:format

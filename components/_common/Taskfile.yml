@@ -43,3 +43,14 @@ tasks:
       - task: generate
       - go mod tidy
       - go build ./...
+
+  vet:
+    desc: Run go vet on component
+    cmds:
+      - go vet ./...
+
+  format:
+    desc: Format component Go code
+    cmds:
+      - go fmt ./...
+      - goimports -w .
