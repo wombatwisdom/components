@@ -80,3 +80,226 @@ tasks:
     desc: Check that all modules build successfully
     cmds:
       - task: build
+
+  # Release tasks
+  release:rc:
+    desc: Create a new release candidate
+    vars:
+      VERSION: '{{.VERSION | default ""}}'
+    cmds:
+      - task: release:check
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          # Auto-determine next RC version
+          LAST_TAG=$(git describe --tags --abbrev=0 --match="v*" 2>/dev/null || echo "v0.0.0")
+          if [[ $LAST_TAG == *"-rc"* ]]; then
+            # Increment RC number
+            BASE=$(echo $LAST_TAG | sed 's/-rc.*//')
+            RC_NUM=$(echo $LAST_TAG | sed 's/.*-rc//')
+            NEW_RC=$((RC_NUM + 1))
+            VERSION="${BASE}-rc${NEW_RC}"
+          else
+            # Create first RC for next minor version
+            MAJOR=$(echo $LAST_TAG | cut -d. -f1)
+            MINOR=$(echo $LAST_TAG | cut -d. -f2 | cut -d- -f1)
+            NEW_MINOR=$((MINOR + 1))
+            VERSION="${MAJOR}.${NEW_MINOR}.0-rc1"
+          fi
+        else
+          VERSION="{{.VERSION}}"
+        fi
+        echo "Creating release candidate: $VERSION"
+        task release:tag VERSION=$VERSION
+
+  release:final:
+    desc: Create a final release
+    vars:
+      VERSION: '{{.VERSION | default ""}}'
+    cmds:
+      - task: release:check
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          # Remove -rc suffix from latest RC
+          LAST_RC=$(git describe --tags --abbrev=0 --match="v*-rc*" 2>/dev/null)
+          if [ -z "$LAST_RC" ]; then
+            echo "Error: No release candidate found to promote"
+            exit 1
+          fi
+          VERSION=$(echo $LAST_RC | sed 's/-rc.*//')
+        else
+          VERSION="{{.VERSION}}"
+        fi
+        echo "Creating final release: $VERSION"
+        task release:tag VERSION=$VERSION
+
+  release:tag:
+    desc: Create and push tags for all components
+    internal: true
+    requires:
+      vars: [VERSION]
+    cmds:
+      - git tag -a {{.VERSION}} -m "Release {{.VERSION}}"
+      - git tag -a components/aws-eventbridge/{{.VERSION}} -m "AWS EventBridge component {{.VERSION}}"
+      - git tag -a components/aws-s3/{{.VERSION}} -m "AWS S3 component {{.VERSION}}"
+      - git tag -a components/ibm-mq/{{.VERSION}} -m "IBM MQ component {{.VERSION}}"
+      - git tag -a components/mqtt/{{.VERSION}} -m "MQTT component {{.VERSION}}"
+      - git tag -a components/nats/{{.VERSION}} -m "NATS component {{.VERSION}}"
+      - git tag -a framework/{{.VERSION}} -m "Framework {{.VERSION}}"
+      - git push origin --tags
+      - echo "Successfully created and pushed tags for {{.VERSION}}"
+
+  release:component:
+    desc: Release a specific component
+    requires:
+      vars: [COMPONENT, VERSION]
+    cmds:
+      - task: release:check
+      - git tag -a components/{{.COMPONENT}}/{{.VERSION}} -m "{{.COMPONENT}} component {{.VERSION}}"
+      - git push origin components/{{.COMPONENT}}/{{.VERSION}}
+      - echo "Successfully released {{.COMPONENT}} component {{.VERSION}}"
+
+  release:check:
+    desc: Pre-release checks
+    internal: true
+    cmds:
+      - |
+        # Check for uncommitted changes
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "Error: Uncommitted changes detected. Please commit or stash changes before releasing."
+          exit 1
+        fi
+      - |
+        # Check we're on main branch
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        if [ "$BRANCH" != "main" ]; then
+          echo "Error: Releases must be created from main branch. Currently on: $BRANCH"
+          exit 1
+        fi
+      - |
+        # Ensure we have latest changes
+        git fetch origin main
+        if [ $(git rev-list HEAD...origin/main --count) -gt 0 ]; then
+          echo "Error: Local main branch is not up to date with origin. Please pull latest changes."
+          exit 1
+        fi
+      - echo "✅ Pre-release checks passed"
+
+  release:github:
+    desc: Create GitHub release
+    vars:
+      VERSION: '{{.VERSION}}'
+      PRERELEASE: '{{.PRERELEASE | default "false"}}'
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "Error: VERSION is required"
+          exit 1
+        fi
+        PRERELEASE_FLAG=""
+        if [ "{{.PRERELEASE}}" = "true" ]; then
+          PRERELEASE_FLAG="--prerelease"
+        fi
+        gh release create {{.VERSION}} \
+          --title "{{.VERSION}}" \
+          --notes "See CHANGELOG.md for details" \
+          $PRERELEASE_FLAG
+
+  release:verify:
+    desc: Verify all tags exist for a version
+    vars:
+      VERSION: '{{.VERSION}}'
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "Error: VERSION is required. Usage: task release:verify VERSION=v0.1.0"
+          exit 1
+        fi
+        MISSING=0
+        echo "Verifying tags for version {{.VERSION}}..."
+        
+        # Check main tag
+        if ! git tag -l | grep -q "^{{.VERSION}}$"; then
+          echo "❌ Missing main repository tag: {{.VERSION}}"
+          MISSING=$((MISSING + 1))
+        else
+          echo "✅ Main repository tag exists: {{.VERSION}}"
+        fi
+        
+        # Check framework tag
+        if ! git tag -l | grep -q "^framework/{{.VERSION}}$"; then
+          echo "❌ Missing framework tag: framework/{{.VERSION}}"
+          MISSING=$((MISSING + 1))
+        else
+          echo "✅ Framework tag exists: framework/{{.VERSION}}"
+        fi
+        
+        # Check component tags
+        for component in aws-eventbridge aws-s3 ibm-mq mqtt nats; do
+          if ! git tag -l | grep -q "^components/${component}/{{.VERSION}}$"; then
+            echo "❌ Missing component tag: components/$component/{{.VERSION}}"
+            MISSING=$((MISSING + 1))
+          else
+            echo "✅ Component tag exists: components/$component/{{.VERSION}}"
+          fi
+        done
+        
+        if [ $MISSING -eq 0 ]; then
+          echo "✅ All tags present for version {{.VERSION}}"
+        else
+          echo "❌ Missing $MISSING tags for version {{.VERSION}}"
+          exit 1
+        fi
+
+  release:list:
+    desc: List release versions
+    cmds:
+      - |
+        echo "Release History:"
+        echo "================"
+        git tag -l "v*" | grep -v "/" | sort -V -r | head -20
+
+  release:current:
+    desc: Show current version
+    cmds:
+      - |
+        CURRENT=$(git describe --tags --abbrev=0 --match="v*" 2>/dev/null || echo "v0.0.0")
+        echo "Current version: $CURRENT"
+
+  release:changelog:
+    desc: Generate changelog between versions
+    vars:
+      FROM: '{{.FROM | default ""}}'
+      TO: '{{.TO | default "HEAD"}}'
+    cmds:
+      - |
+        if [ -z "{{.FROM}}" ]; then
+          FROM=$(git describe --tags --abbrev=0 --match="v*" 2>/dev/null || echo "v0.0.0")
+        else
+          FROM="{{.FROM}}"
+        fi
+        TO="{{.TO}}"
+        
+        echo "## Changelog from $FROM to $TO"
+        echo ""
+        echo "### Features"
+        git log --pretty=format:"- %s (%h)" "$FROM..$TO" | grep -E "^- feat:" | sed 's/^- feat: /- /' || echo "- None"
+        
+        echo ""
+        echo "### Fixes"
+        git log --pretty=format:"- %s (%h)" "$FROM..$TO" | grep -E "^- fix:" | sed 's/^- fix: /- /' || echo "- None"
+        
+        echo ""
+        echo "### Other Changes"
+        git log --pretty=format:"- %s (%h)" "$FROM..$TO" | grep -vE "^- (feat|fix):" || echo "- None"
+        
+        echo ""
+        echo "### Components Updated"
+        for component in aws-eventbridge aws-s3 ibm-mq mqtt nats; do
+          if git diff --name-only "$FROM..$TO" | grep -q "^components/$component/"; then
+            echo "- $component"
+          fi
+        done
+        
+        if git diff --name-only "$FROM..$TO" | grep -q "^framework/"; then
+          echo "- framework"
+        fi
