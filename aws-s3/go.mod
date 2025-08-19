@@ -16,7 +16,7 @@ require (
 	github.com/wombatwisdom/components/framework v0.0.0-00010101000000-000000000000
 )
 
-replace github.com/wombatwisdom/components/framework => ../../framework
+replace github.com/wombatwisdom/components/framework => ../framework
 
 require (
 	github.com/aws/aws-sdk-go v1.55.5 // indirect

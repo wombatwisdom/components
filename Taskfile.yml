@@ -6,9 +6,21 @@ vars:
   GO_MODULE: github.com/wombatwisdom/components
 
 includes:
-  components:
-    taskfile: ./components/Taskfile.yml
-    dir: ./components
+  nats:
+    taskfile: ./nats/Taskfile.yml
+    dir: ./nats
+  mqtt:
+    taskfile: ./mqtt/Taskfile.yml
+    dir: ./mqtt
+  aws-s3:
+    taskfile: ./aws-s3/Taskfile.yml
+    dir: ./aws-s3
+  aws-eventbridge:
+    taskfile: ./aws-eventbridge/Taskfile.yml
+    dir: ./aws-eventbridge
+  ibm-mq:
+    taskfile: ./ibm-mq/Taskfile.yml
+    dir: ./ibm-mq
   framework:
     taskfile: ./framework/Taskfile.yml 
     dir: ./framework
@@ -138,11 +150,11 @@ tasks:
       vars: [VERSION]
     cmds:
       - git tag -a {{.VERSION}} -m "Release {{.VERSION}}"
-      - git tag -a components/aws-eventbridge/{{.VERSION}} -m "AWS EventBridge component {{.VERSION}}"
-      - git tag -a components/aws-s3/{{.VERSION}} -m "AWS S3 component {{.VERSION}}"
-      - git tag -a components/ibm-mq/{{.VERSION}} -m "IBM MQ component {{.VERSION}}"
-      - git tag -a components/mqtt/{{.VERSION}} -m "MQTT component {{.VERSION}}"
-      - git tag -a components/nats/{{.VERSION}} -m "NATS component {{.VERSION}}"
+      - git tag -a aws-eventbridge/{{.VERSION}} -m "AWS EventBridge component {{.VERSION}}"
+      - git tag -a aws-s3/{{.VERSION}} -m "AWS S3 component {{.VERSION}}"
+      - git tag -a ibm-mq/{{.VERSION}} -m "IBM MQ component {{.VERSION}}"
+      - git tag -a mqtt/{{.VERSION}} -m "MQTT component {{.VERSION}}"
+      - git tag -a nats/{{.VERSION}} -m "NATS component {{.VERSION}}"
       - git tag -a framework/{{.VERSION}} -m "Framework {{.VERSION}}"
       - git push origin --tags
       - echo "Successfully created and pushed tags for {{.VERSION}}"
@@ -153,8 +165,8 @@ tasks:
       vars: [COMPONENT, VERSION]
     cmds:
       - task: release:check
-      - git tag -a components/{{.COMPONENT}}/{{.VERSION}} -m "{{.COMPONENT}} component {{.VERSION}}"
-      - git push origin components/{{.COMPONENT}}/{{.VERSION}}
+      - git tag -a {{.COMPONENT}}/{{.VERSION}} -m "{{.COMPONENT}} component {{.VERSION}}"
+      - git push origin {{.COMPONENT}}/{{.VERSION}}
       - echo "Successfully released {{.COMPONENT}} component {{.VERSION}}"
 
   release:check:
@@ -233,11 +245,11 @@ tasks:
         
         # Check component tags
         for component in aws-eventbridge aws-s3 ibm-mq mqtt nats; do
-          if ! git tag -l | grep -q "^components/${component}/{{.VERSION}}$"; then
-            echo "❌ Missing component tag: components/$component/{{.VERSION}}"
+          if ! git tag -l | grep -q "^${component}/{{.VERSION}}$"; then
+            echo "❌ Missing component tag: $component/{{.VERSION}}"
             MISSING=$((MISSING + 1))
           else
-            echo "✅ Component tag exists: components/$component/{{.VERSION}}"
+            echo "✅ Component tag exists: $component/{{.VERSION}}"
           fi
         done
         
@@ -293,7 +305,7 @@ tasks:
         echo ""
         echo "### Components Updated"
         for component in aws-eventbridge aws-s3 ibm-mq mqtt nats; do
-          if git diff --name-only "$FROM..$TO" | grep -q "^components/$component/"; then
+          if git diff --name-only "$FROM..$TO" | grep -q "^$component/"; then
             echo "- $component"
           fi
         done

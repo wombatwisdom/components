@@ -66,8 +66,8 @@ func main() {
 	validConfigExample, _ := reader.ReadString('\n')
 	config.ValidConfigExample = strings.TrimSpace(validConfigExample)
 
-	// Create component directory
-	componentDir := filepath.Join(".", componentName)
+	// Create component directory at repository root
+	componentDir := filepath.Join("../../", componentName)
 	if err := os.MkdirAll(componentDir, 0755); err != nil {
 		fmt.Printf("Error creating directory: %v\n", err)
 		os.Exit(1)
