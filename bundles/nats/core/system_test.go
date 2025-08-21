@@ -6,8 +6,8 @@ import (
 	"github.com/nats-io/nats.go"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/wombatwisdom/components/bundles/nats/core"
 	"github.com/wombatwisdom/components/framework/spec"
-	"github.com/wombatwisdom/components/nats/core"
 )
 
 var _ = Describe("System", func() {

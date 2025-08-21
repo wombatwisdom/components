@@ -2,13 +2,10 @@ version: "3"
 
 silent: true
 
-vars:
-  GO_MODULE: github.com/wombatwisdom/components
-
 includes:
-  components:
-    taskfile: ./components/Taskfile.yml
-    dir: ./components
+  bundles:
+    taskfile: ./bundles/Taskfile.yml
+    dir: ./bundles
   framework:
     taskfile: ./framework/Taskfile.yml 
     dir: ./framework
@@ -33,31 +30,31 @@ tasks:
     desc: Run all tests in workspace
     cmds:
       - task: framework:test
-      - task: components:all:test
+      - task: bundles:all:test
 
   test:coverage:
     desc: Run tests with coverage report
     cmds:
       - task: framework:test:coverage
-      - task: components:all:test:coverage
+      - task: bundles:all:test:coverage
 
   test:race:
     desc: Run tests with race detector
     cmds:
       - task: framework:test:race
-      - task: components:all:test:race
+      - task: bundles:all:test:race
 
   validate:
     desc: Validate all modules
     cmds:
       - task: framework:validate
-      - task: components:all:validate
+      - task: bundles:all:validate
         
   build:
     desc: build all workspace modules
     cmds:
       - task: framework:build
-      - task: components:all:build
+      - task: bundles:all:build
 
   deps:sync:
     desc: Sync workspace dependencies
@@ -68,13 +65,13 @@ tasks:
     desc: Run go vet on all modules
     cmds:
       - task: framework:vet
-      - task: components:all:vet
+      - task: bundles:all:vet
 
   format:
     desc: Format all Go code
     cmds:
       - task: framework:format
-      - task: components:all:format
+      - task: bundles:all:format
 
   build:check:
     desc: Check that all modules build successfully
@@ -138,23 +135,23 @@ tasks:
       vars: [VERSION]
     cmds:
       - git tag -a {{.VERSION}} -m "Release {{.VERSION}}"
-      - git tag -a components/aws-eventbridge/{{.VERSION}} -m "AWS EventBridge component {{.VERSION}}"
-      - git tag -a components/aws-s3/{{.VERSION}} -m "AWS S3 component {{.VERSION}}"
-      - git tag -a components/ibm-mq/{{.VERSION}} -m "IBM MQ component {{.VERSION}}"
-      - git tag -a components/mqtt/{{.VERSION}} -m "MQTT component {{.VERSION}}"
-      - git tag -a components/nats/{{.VERSION}} -m "NATS component {{.VERSION}}"
+      - git tag -a bundles/aws-eventbridge/{{.VERSION}} -m "AWS EventBridge component {{.VERSION}}"
+      - git tag -a bundles/aws-s3/{{.VERSION}} -m "AWS S3 component {{.VERSION}}"
+      - git tag -a bundles/ibm-mq/{{.VERSION}} -m "IBM MQ component {{.VERSION}}"
+      - git tag -a bundles/mqtt/{{.VERSION}} -m "MQTT component {{.VERSION}}"
+      - git tag -a bundles/nats/{{.VERSION}} -m "NATS component {{.VERSION}}"
       - git tag -a framework/{{.VERSION}} -m "Framework {{.VERSION}}"
       - git push origin --tags
       - echo "Successfully created and pushed tags for {{.VERSION}}"
 
-  release:component:
-    desc: Release a specific component
+  release:bundle:
+    desc: Release a specific component bundle
     requires:
       vars: [COMPONENT, VERSION]
     cmds:
       - task: release:check
-      - git tag -a components/{{.COMPONENT}}/{{.VERSION}} -m "{{.COMPONENT}} component {{.VERSION}}"
-      - git push origin components/{{.COMPONENT}}/{{.VERSION}}
+      - git tag -a bundles/{{.COMPONENT}}/{{.VERSION}} -m "{{.COMPONENT}} component {{.VERSION}}"
+      - git push origin bundles/{{.COMPONENT}}/{{.VERSION}}
       - echo "Successfully released {{.COMPONENT}} component {{.VERSION}}"
 
   release:check:
@@ -233,11 +230,11 @@ tasks:
         
         # Check component tags
         for component in aws-eventbridge aws-s3 ibm-mq mqtt nats; do
-          if ! git tag -l | grep -q "^components/${component}/{{.VERSION}}$"; then
-            echo "❌ Missing component tag: components/$component/{{.VERSION}}"
+          if ! git tag -l | grep -q "^bundles/${component}/{{.VERSION}}$"; then
+            echo "❌ Missing component tag: bundles/$component/{{.VERSION}}"
             MISSING=$((MISSING + 1))
           else
-            echo "✅ Component tag exists: components/$component/{{.VERSION}}"
+            echo "✅ Component tag exists: bundles/$component/{{.VERSION}}"
           fi
         done
         
@@ -293,7 +290,7 @@ tasks:
         echo ""
         echo "### Components Updated"
         for component in aws-eventbridge aws-s3 ibm-mq mqtt nats; do
-          if git diff --name-only "$FROM..$TO" | grep -q "^components/$component/"; then
+          if git diff --name-only "$FROM..$TO" | grep -q "^bundles/$component/"; then
             echo "- $component"
           fi
         done

@@ -6,8 +6,8 @@ import (
 	mqtt2 "github.com/eclipse/paho.mqtt.golang"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/wombatwisdom/components/bundles/mqtt"
 	"github.com/wombatwisdom/components/framework/spec"
-	"github.com/wombatwisdom/components/mqtt"
 )
 
 var _ = Describe("Output", func() {

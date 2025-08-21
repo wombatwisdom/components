@@ -2,18 +2,19 @@ package mqtt_test
 
 import (
 	"context"
+	"fmt"
+	"time"
 
-	"github.com/google/uuid"
+	mqtt2 "github.com/eclipse/paho.mqtt.golang"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/wombatwisdom/components/bundles/mqtt"
 	"github.com/wombatwisdom/components/framework/spec"
 	"github.com/wombatwisdom/components/framework/test"
-	"github.com/wombatwisdom/components/mqtt"
 )
 
-var _ = Describe("Roundtrip", func() {
+var _ = Describe("Input", func() {
 	var input *mqtt.Input
-	var output *mqtt.Output
 
 	var collector *test.ListCollector
 
@@ -22,25 +23,12 @@ var _ = Describe("Roundtrip", func() {
 		input, err = mqtt.NewInput(env, mqtt.InputConfig{
 			CommonMQTTConfig: mqtt.CommonMQTTConfig{
 				Urls:     []string{url},
-				ClientId: uuid.New().String(),
+				ClientId: "SINK",
 			},
 			Filters: map[string]byte{
 				"test": 1,
 			},
 		})
-		Expect(err).ToNot(HaveOccurred())
-
-		output, err = mqtt.NewOutput(env, mqtt.OutputConfig{
-			CommonMQTTConfig: mqtt.CommonMQTTConfig{
-				Urls:     []string{url},
-				ClientId: uuid.New().String(),
-			},
-			QOS:       1,
-			TopicExpr: "test",
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		err = output.Connect(context.Background())
 		Expect(err).ToNot(HaveOccurred())
 
 		collector = test.NewListCollector()
@@ -50,19 +38,25 @@ var _ = Describe("Roundtrip", func() {
 
 	AfterEach(func() {
 		_ = input.Disconnect(context.Background())
-		_ = output.Disconnect(context.Background())
 		_ = collector.Disconnect()
 	})
 
-	When("sending a message to the output", func() {
+	When("sending a message to MQTT", func() {
 		It("should receive the message on the input", func() {
 			msg := spec.NewBytesMessage([]byte("hello, world"))
-
-			err := output.Write(context.Background(), msg)
+			b, err := msg.Raw()
 			Expect(err).ToNot(HaveOccurred())
 
-			collector.Wait()
+			tc := mqtt2.NewClient(mqtt2.NewClientOptions().AddBroker(url))
+			tc.Connect().Wait()
+
+			tc.Publish("test", 1, false, b).Wait()
+
+			success := collector.WaitWithTimeout(10 * time.Second)
+			Expect(success).To(BeTrue(), "Expected to receive message within timeout")
+
 			Expect(collector.Messages()).To(HaveLen(1))
+			GinkgoLogr.Info(fmt.Sprintf("Received messages: %v", collector.Messages()))
 		})
 	})
 })

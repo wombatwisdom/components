@@ -3,7 +3,7 @@
 package nats
 
 import (
-	"github.com/wombatwisdom/components/nats/core"
+	"github.com/wombatwisdom/components/bundles/nats/core"
 )
 
 // Core NATS component functions for backward compatibility
