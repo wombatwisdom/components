@@ -6,9 +6,9 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/wombatwisdom/components/bundles/mqtt"
 	"github.com/wombatwisdom/components/framework/spec"
 	"github.com/wombatwisdom/components/framework/test"
-	"github.com/wombatwisdom/components/mqtt"
 )
 
 var _ = Describe("Roundtrip", func() {

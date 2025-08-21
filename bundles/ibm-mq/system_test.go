@@ -3,8 +3,8 @@ package ibm_mq_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	mq "github.com/wombatwisdom/components/bundles/ibm-mq"
 	"github.com/wombatwisdom/components/framework/spec"
-	mq "github.com/wombatwisdom/components/mq"
 )
 
 var _ = Describe("System", func() {

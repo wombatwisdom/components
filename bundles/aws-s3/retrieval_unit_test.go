@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	s3comp "github.com/wombatwisdom/components/aws-s3"
+	s3comp "github.com/wombatwisdom/components/bundles/aws-s3"
 	"github.com/wombatwisdom/components/framework/spec"
 	"github.com/wombatwisdom/components/framework/test"
 )
