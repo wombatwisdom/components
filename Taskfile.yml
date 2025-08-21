@@ -144,8 +144,8 @@ tasks:
       - git push origin --tags
       - echo "Successfully created and pushed tags for {{.VERSION}}"
 
-  release:component:
-    desc: Release a specific component
+  release:bundle:
+    desc: Release a specific component bundle
     requires:
       vars: [COMPONENT, VERSION]
     cmds:
