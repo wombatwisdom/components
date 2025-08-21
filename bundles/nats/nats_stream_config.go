@@ -2,9 +2,11 @@
 
 package nats
 
-import "encoding/json"
-import "fmt"
-import "reflect"
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+)
 
 type StreamConfig struct {
 	// Number of messages to fetch in a single batch. Only applies to inputs. Higher
