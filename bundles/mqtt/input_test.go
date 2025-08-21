@@ -3,6 +3,7 @@ package mqtt_test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	mqtt2 "github.com/eclipse/paho.mqtt.golang"
 	. "github.com/onsi/ginkgo/v2"
@@ -50,7 +51,9 @@ var _ = Describe("Input", func() {
 			tc.Connect().Wait()
 
 			tc.Publish("test", 1, false, b).Wait()
-			collector.Wait()
+
+			success := collector.WaitWithTimeout(10 * time.Second)
+			Expect(success).To(BeTrue(), "Expected to receive message within timeout")
 
 			Expect(collector.Messages()).To(HaveLen(1))
 			GinkgoLogr.Info(fmt.Sprintf("Received messages: %v", collector.Messages()))

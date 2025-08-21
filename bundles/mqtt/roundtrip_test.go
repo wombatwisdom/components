@@ -2,6 +2,7 @@ package mqtt_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -61,7 +62,8 @@ var _ = Describe("Roundtrip", func() {
 			err := output.Write(context.Background(), msg)
 			Expect(err).ToNot(HaveOccurred())
 
-			collector.Wait()
+			success := collector.WaitWithTimeout(10 * time.Second)
+			Expect(success).To(BeTrue(), "Expected to receive message within timeout")
 			Expect(collector.Messages()).To(HaveLen(1))
 		})
 	})

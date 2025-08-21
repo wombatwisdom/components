@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/wombatwisdom/components/framework/spec"
 )
@@ -17,20 +18,36 @@ type ListCollector struct {
 	lock sync.Mutex
 
 	dataLock chan struct{}
+	locked   bool
 
 	messages []spec.Message
 }
 
 func (l *ListCollector) Wait() {
+	l.WaitWithTimeout(30 * time.Second)
+}
+
+func (l *ListCollector) WaitWithTimeout(timeout time.Duration) bool {
 	l.lock.Lock()
 	hasMessages := len(l.messages) > 0
+	dataLock := l.dataLock
+	locked := l.locked
 	l.lock.Unlock()
 
 	if hasMessages {
-		return
+		return true
 	}
 
-	<-l.dataLock
+	if locked {
+		return true
+	}
+
+	select {
+	case <-dataLock:
+		return true
+	case <-time.After(timeout):
+		return false
+	}
 }
 
 func (l *ListCollector) Messages() []spec.Message {
@@ -44,8 +61,9 @@ func (l *ListCollector) Collect(message spec.Message) error {
 	defer l.lock.Unlock()
 	l.messages = append(l.messages, message)
 
-	if l.dataLock != nil {
+	if l.dataLock != nil && !l.locked {
 		close(l.dataLock)
+		l.locked = true
 	}
 	return nil
 }
@@ -61,6 +79,16 @@ func (l *ListCollector) Write(message spec.Message) error {
 
 func (l *ListCollector) Disconnect() error {
 	return nil
+}
+
+func (l *ListCollector) Reset() {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.messages = nil
+	if l.locked {
+		l.dataLock = make(chan struct{})
+		l.locked = false
+	}
 }
 
 // Legacy methods
