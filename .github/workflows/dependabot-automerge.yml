@@ -12,7 +12,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -37,7 +37,7 @@ jobs:
 
     - name: Auto-merge
       if: success()
-      uses: pascalgn/merge-action@v0.15.6
+      uses: pascalgn/automerge-action@v0.16.4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         merge_method: squash
