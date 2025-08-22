@@ -4,6 +4,5 @@ toolchain go1.24.4
 
 use (
 	.
-	./framework
 	./tools
 )
