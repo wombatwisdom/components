@@ -26,7 +26,7 @@ require (
 	github.com/mochi-mqtt/server/v2 v2.7.9
 
 	// NATS dependencies
-	github.com/nats-io/jwt/v2 v2.7.4
+	github.com/nats-io/jwt/v2 v2.8.0
 	github.com/nats-io/nats-server/v2 v2.11.4
 	github.com/nats-io/nats.go v1.43.0
 	github.com/nats-io/nkeys v0.4.11
