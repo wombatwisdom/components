@@ -47,6 +47,10 @@ var _ = Describe("Roundtrip", func() {
 		collector = test.NewListCollector()
 		err = input.Connect(context.Background(), collector)
 		Expect(err).ToNot(HaveOccurred())
+
+		// Allow time for MQTT subscription to be fully established
+		// The subscription happens asynchronously in the OnConnectHandler
+		time.Sleep(100 * time.Millisecond)
 	})
 
 	AfterEach(func() {
