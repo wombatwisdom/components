@@ -75,11 +75,11 @@ func main() {
 
 	// Template files to generate
 	templates := map[string]string{
-		"system.go":      "templates/component/system.go.tmpl",
-		"input.go":       "templates/component/input.go.tmpl",
-		"output.go":      "templates/component/output.go.tmpl",
-		"system_test.go": "templates/component/system_test.go.tmpl",
-		"Taskfile.yml":   "templates/component/Taskfile.yml.tmpl",
+		"system.go":      "tools/templates/component/system.go.tmpl",
+		"input.go":       "tools/templates/component/input.go.tmpl",
+		"output.go":      "tools/templates/component/output.go.tmpl",
+		"system_test.go": "tools/templates/component/system_test.go.tmpl",
+		"Taskfile.yml":   "tools/templates/component/Taskfile.yml.tmpl",
 	}
 
 	// Generate files

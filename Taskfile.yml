@@ -21,7 +21,7 @@ tasks:
     desc: Setup development environment
     cmds:
       - go version
-      - go work sync
+      - go mod tidy
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
       - go install golang.org/x/tools/cmd/goimports@latest
       - go install github.com/atombender/go-jsonschema@84c8d2b98bf0373873df8a353b122530a7110c70
@@ -56,10 +56,10 @@ tasks:
       - task: framework:build
       - task: bundles:all:build
 
-  deps:sync:
-    desc: Sync workspace dependencies
+  deps:tidy:
+    desc: Tidy module dependencies
     cmds:
-      - go work sync
+      - go mod tidy
 
   vet:
     desc: Run go vet on all modules

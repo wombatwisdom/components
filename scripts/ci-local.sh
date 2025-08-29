@@ -35,32 +35,15 @@ if ! command -v task &> /dev/null; then
     exit 1
 fi
 
-print_status "Step 1: Sync workspace dependencies"
-go work sync
-go mod tidy -C framework
-go mod tidy -C components/aws-s3
-go mod tidy -C components/aws-eventbridge
-go mod tidy -C components/ibm-mq
-go mod tidy -C components/mqtt
-go mod tidy -C components/nats
-go mod tidy -C tools
-print_success "Dependencies synced"
+print_status "Step 1: Tidy module dependencies"
+go mod tidy
+print_success "Dependencies tidied"
 
 print_status "Step 2: Download and verify dependencies"
-go mod download -C framework
-go mod download -C components/aws-s3
-go mod download -C components/aws-eventbridge
-go mod download -C components/ibm-mq
-go mod download -C components/mqtt
-go mod download -C components/nats
+go mod download
 go mod download -C tools
 
-go mod verify -C framework
-go mod verify -C components/aws-s3
-go mod verify -C components/aws-eventbridge
-go mod verify -C components/ibm-mq
-go mod verify -C components/mqtt
-go mod verify -C components/nats
+go mod verify
 go mod verify -C tools
 print_success "Dependencies verified"
 
@@ -70,11 +53,7 @@ print_success "Tests passed"
 
 print_status "Step 4: Run tests with race detector"
 go test -C framework -race ./...
-go test -C components/aws-s3 -race ./...
-go test -C components/aws-eventbridge -race ./...
-go test -C components/ibm-mq -race ./...
-go test -C components/mqtt -race ./...
-go test -C components/nats -race ./...
+# Race tests are now handled by task commands
 print_success "Race detector tests passed"
 
 print_status "Step 5: Run linting"
@@ -100,7 +79,7 @@ echo ""
 echo -e "${GREEN}🎉 All CI checks passed locally!${NC}"
 echo ""
 echo "Your code is ready for CI. The following commands were run:"
-echo "  1. go work sync + go mod tidy on all modules"
+echo "  1. go mod tidy"
 echo "  2. go mod download/verify on all modules"
 echo "  3. task test (tests all workspace modules)"
 echo "  4. Race detector tests on all modules"
