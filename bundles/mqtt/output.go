@@ -21,19 +21,9 @@ type OutputConfig struct {
 }
 
 func NewOutput(env spec.Environment, config OutputConfig) (*Output, error) {
-	topic := env.NewDynamicField(config.TopicExpr)
-
-	var retained spec.DynamicField
-	if config.RetainedExpr != "" {
-		retained = env.NewDynamicField(config.RetainedExpr)
-	}
-
 	return &Output{
 		config: config,
 		log:    env,
-
-		topic:    topic,
-		retained: retained,
 	}, nil
 }
 
@@ -42,8 +32,8 @@ type Output struct {
 
 	log spec.Logger
 
-	topic    spec.DynamicField
-	retained spec.DynamicField
+	topic    spec.Expression
+	retained spec.Expression
 
 	client  mqtt.Client
 	connMut sync.RWMutex
@@ -55,6 +45,19 @@ func (m *Output) Init(ctx spec.ComponentContext) error {
 
 	if m.client != nil {
 		return nil
+	}
+
+	var err error
+	m.topic, err = ctx.ParseExpression(m.config.TopicExpr)
+	if err != nil {
+		return fmt.Errorf("failed to parse topic expression: %w", err)
+	}
+
+	if m.retained != nil {
+		m.retained, err = ctx.ParseExpression(m.config.RetainedExpr)
+		if err != nil {
+			return fmt.Errorf("failed to parse retained expression: %w", err)
+		}
 	}
 
 	opts := NewClientOptions(m.config.CommonMQTTConfig).
@@ -98,10 +101,12 @@ func (m *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
 
 	var errs error
 	for _, message := range batch.Messages() {
+		exprCtx := spec.MessageExpressionContext(message)
+
 		var err error
 		retained := false
 		if m.retained != nil {
-			retained, err = m.retained.AsBool(message)
+			retained, err = m.retained.EvalBool(exprCtx)
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("retained interpolation error: %w", err))
 
@@ -113,7 +118,7 @@ func (m *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
 			}
 		}
 
-		topicStr, err := m.topic.AsString(message)
+		topicStr, err := m.topic.EvalString(exprCtx)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("topic interpolation error: %w", err))
 

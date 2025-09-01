@@ -20,7 +20,7 @@ var _ = Describe("Output", func() {
 				Urls:     []string{url},
 				ClientId: "SINK",
 			},
-			TopicExpr: "test",
+			TopicExpr: "\"test\"",
 		})
 		Expect(err).ToNot(HaveOccurred())
 

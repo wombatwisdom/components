@@ -37,7 +37,7 @@ var _ = Describe("Roundtrip", func() {
 				ClientId: uuid.New().String(),
 			},
 			QOS:       1,
-			TopicExpr: "test",
+			TopicExpr: "\"test\"",
 		})
 		Expect(err).ToNot(HaveOccurred())
 
