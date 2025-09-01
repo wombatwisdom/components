@@ -10,7 +10,6 @@ import (
 
 type environment struct {
 	spec.Logger
-	spec.DynamicFieldFactory
 }
 
 func (e *environment) GetString(key string) string {
@@ -26,11 +25,8 @@ func (e *environment) GetBool(key string) bool {
 }
 
 func TestEnvironment() spec.Environment {
-	exprFactory := spec.NewExprLangExpressionFactory()
-
 	return &environment{
-		Logger:              &logger{slog.Default()},
-		DynamicFieldFactory: &dynamicFieldFactory{exprFactory: exprFactory},
+		Logger: &logger{slog.Default()},
 	}
 }
 

@@ -2,10 +2,11 @@ package mqtt
 
 import (
 	"context"
-	"time"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/wombatwisdom/components/framework/spec"
+	"maps"
+	"sync"
+	"time"
 )
 
 type InputConfig struct {
@@ -19,14 +20,15 @@ type InputConfig struct {
 
 	// ClientId is an optional unique identifier for the client
 	ClientId string
+
+	// EnableAutoAck enables automatic acknowledgment for at-least-once delivery (paho SetAutoAckDisabled)
+	EnableAutoAck bool
 }
 
 func NewInput(env spec.Environment, config InputConfig) (*Input, error) {
 	return &Input{
 		InputConfig: config,
 		log:         env,
-
-		done: make(chan struct{}),
 	}, nil
 }
 
@@ -34,40 +36,60 @@ type Input struct {
 	InputConfig
 
 	client mqtt.Client
-	done   chan struct{}
+
+	msgChan     chan mqtt.Message
+	msgChanLock sync.Mutex
 
 	log spec.Logger
 }
 
-func (m *Input) Connect(ctx context.Context, collector spec.Collector) error {
+func (m *Input) closeMsgChan() bool {
+	m.msgChanLock.Lock()
+	defer m.msgChanLock.Unlock()
+
+	chanOpen := m.msgChan != nil
+	if chanOpen {
+		close(m.msgChan)
+		m.msgChan = nil
+	}
+	return chanOpen
+}
+
+func (m *Input) Init(ctx spec.ComponentContext) error {
 	if m.client != nil {
 		return spec.ErrAlreadyConnected
 	}
+
+	var msgMut sync.Mutex
+	msgChan := make(chan mqtt.Message)
 
 	opts := NewClientOptions(m.InputConfig.CommonMQTTConfig).
 		SetCleanSession(m.CleanSession).
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
 			client.Disconnect(0)
-			_ = collector.Disconnect()
+			m.closeMsgChan()
 			m.log.Errorf("Connection lost due to: %v\n", reason)
 		}).
-		SetOnConnectHandler(func(c mqtt.Client) {
-			tok := c.SubscribeMultiple(m.Filters, func(c mqtt.Client, msg mqtt.Message) {
-				message := NewMqttMessage(msg)
+		SetOnConnectHandler(func(client mqtt.Client) {
+			tok := client.SubscribeMultiple(m.Filters, func(_ mqtt.Client, msg mqtt.Message) {
+				msgMut.Lock()
+				defer msgMut.Unlock()
 
-				// not being able to write a message will never call the ack function. This means
-				// that the message will be redelivered by the mqtt broker.
-				if err := collector.Write(message); err != nil {
-					m.log.Warnf("Failed to write message: %v", err)
+				if msgChan != nil {
+					select {
+					case msgChan <- msg:
+					case <-ctx.Context().Done():
+					}
 				}
 			})
 			tok.Wait()
 			if err := tok.Error(); err != nil {
-				m.log.Errorf("Failed to subscribe using filters '%v': %v", m.Filters, err)
+				m.log.Errorf("Failed to subscribe to topics '%v': %v", maps.Keys(m.InputConfig.Filters), err)
 				m.log.Errorf("Shutting connection down.")
-				_ = collector.Disconnect()
+				m.closeMsgChan()
 			}
-		})
+		}).
+		SetAutoAckDisabled(!m.EnableAutoAck)
 
 	client := mqtt.NewClient(opts)
 
@@ -82,26 +104,70 @@ func (m *Input) Connect(ctx context.Context, collector spec.Collector) error {
 			select {
 			case <-time.After(time.Second):
 				if !client.IsConnected() {
-					_ = collector.Disconnect()
-					m.log.Errorf("Connection lost for unknown reasons.")
+					if m.closeMsgChan() {
+						m.log.Errorf("Connection lost for unknown reasons.")
+					}
+
 					return
 				}
-			case <-m.done:
+			case <-ctx.Context().Done():
 				return
 			}
 		}
 	}()
 
 	m.client = client
+	m.msgChan = msgChan
 	return nil
 }
 
-func (m *Input) Disconnect(ctx context.Context) (err error) {
+func (m *Input) Close(ctx spec.ComponentContext) error {
+	m.msgChanLock.Lock()
+	defer m.msgChanLock.Unlock()
+
 	if m.client != nil {
 		m.client.Disconnect(0)
 		m.client = nil
-		close(m.done)
 	}
 
-	return
+	return nil
+}
+
+func (m *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallback, error) {
+	m.msgChanLock.Lock()
+	msgChan := m.msgChan
+	m.msgChanLock.Unlock()
+
+	if msgChan == nil {
+		return nil, nil, spec.ErrNotConnected
+	}
+
+	select {
+	case msg, open := <-msgChan:
+		if !open {
+			m.closeMsgChan()
+			return nil, nil, spec.ErrNotConnected
+		}
+
+		specMsg := ctx.NewMessage()
+		specMsg.SetRaw(msg.Payload())
+
+		specMsg.SetMetadata("mqtt_duplicate", msg.Duplicate())
+		specMsg.SetMetadata("mqtt_qos", int(msg.Qos()))
+		specMsg.SetMetadata("mqtt_retained", msg.Retained())
+		specMsg.SetMetadata("mqtt_topic", msg.Topic())
+		specMsg.SetMetadata("mqtt_message_id", int(msg.MessageID()))
+
+		return ctx.NewBatch(specMsg), func(_ context.Context, res error) error {
+			if res == nil {
+				// only ack if not already auto-acked
+				if !m.InputConfig.EnableAutoAck {
+					msg.Ack()
+				}
+			}
+			return nil
+		}, nil
+	case <-ctx.Context().Done():
+		return nil, nil, ctx.Context().Err()
+	}
 }

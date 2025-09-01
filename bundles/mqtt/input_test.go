@@ -1,8 +1,8 @@
 package mqtt_test
 
 import (
-	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	mqtt2 "github.com/eclipse/paho.mqtt.golang"
@@ -15,8 +15,7 @@ import (
 
 var _ = Describe("Input", func() {
 	var input *mqtt.Input
-
-	var collector *test.ListCollector
+	var ctx spec.ComponentContext
 
 	BeforeEach(func() {
 		var err error
@@ -31,14 +30,13 @@ var _ = Describe("Input", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		collector = test.NewListCollector()
-		err = input.Connect(context.Background(), collector)
+		ctx = test.NewMockComponentContext()
+		err = input.Init(ctx)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
-		_ = input.Disconnect(context.Background())
-		_ = collector.Disconnect()
+		_ = input.Close(ctx)
 	})
 
 	When("sending a message to MQTT", func() {
@@ -50,13 +48,38 @@ var _ = Describe("Input", func() {
 			tc := mqtt2.NewClient(mqtt2.NewClientOptions().AddBroker(url))
 			tc.Connect().Wait()
 
+			received := make(chan spec.Batch)
+			defer close(received)
+			receivedErr := make(chan error)
+			defer close(receivedErr)
+
+			// start reading messages
+			go func() {
+				batch, cb, err := input.Read(ctx)
+				if err != nil {
+					receivedErr <- err
+					return
+				}
+
+				if cb != nil {
+					_ = cb(ctx.Context(), nil)
+				}
+
+				received <- batch
+			}()
+
 			tc.Publish("test", 1, false, b).Wait()
 
-			success := collector.WaitWithTimeout(10 * time.Second)
-			Expect(success).To(BeTrue(), "Expected to receive message within timeout")
-
-			Expect(collector.Messages()).To(HaveLen(1))
-			GinkgoLogr.Info(fmt.Sprintf("Received messages: %v", collector.Messages()))
+			select {
+			case <-time.After(5 * time.Second):
+				Fail("Did not receive message within timeout")
+			case err := <-receivedErr:
+				Fail(fmt.Sprintf("Error reading message: %v", err))
+			case batch := <-received:
+				Expect(batch).ToNot(BeNil())
+				msgs := maps.Collect(batch.Messages())
+				Expect(msgs).To(HaveLen(1))
+			}
 		})
 	})
 })

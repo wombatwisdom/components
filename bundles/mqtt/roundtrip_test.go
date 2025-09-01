@@ -1,7 +1,8 @@
 package mqtt_test
 
 import (
-	"context"
+	"fmt"
+	"maps"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,8 +16,7 @@ import (
 var _ = Describe("Roundtrip", func() {
 	var input *mqtt.Input
 	var output *mqtt.Output
-
-	var collector *test.ListCollector
+	var ctx spec.ComponentContext
 
 	BeforeEach(func() {
 		var err error
@@ -37,15 +37,16 @@ var _ = Describe("Roundtrip", func() {
 				ClientId: uuid.New().String(),
 			},
 			QOS:       1,
-			TopicExpr: "test",
+			TopicExpr: "\"test\"",
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		err = output.Connect(context.Background())
+		ctx = test.NewMockComponentContext()
+
+		err = output.Init(ctx)
 		Expect(err).ToNot(HaveOccurred())
 
-		collector = test.NewListCollector()
-		err = input.Connect(context.Background(), collector)
+		err = input.Init(ctx)
 		Expect(err).ToNot(HaveOccurred())
 
 		// Allow time for MQTT subscription to be fully established
@@ -54,21 +55,47 @@ var _ = Describe("Roundtrip", func() {
 	})
 
 	AfterEach(func() {
-		_ = input.Disconnect(context.Background())
-		_ = output.Disconnect(context.Background())
-		_ = collector.Disconnect()
+		_ = input.Close(ctx)
+		_ = output.Close(ctx)
 	})
 
 	When("sending a message to the output", func() {
 		It("should receive the message on the input", func() {
 			msg := spec.NewBytesMessage([]byte("hello, world"))
 
-			err := output.Write(context.Background(), msg)
+			received := make(chan spec.Batch)
+			defer close(received)
+			receivedErr := make(chan error)
+			defer close(receivedErr)
+
+			// start reading messages
+			go func() {
+				batch, cb, err := input.Read(ctx)
+				if err != nil {
+					receivedErr <- err
+					return
+				}
+
+				if cb != nil {
+					_ = cb(ctx.Context(), nil)
+				}
+
+				received <- batch
+			}()
+
+			err := output.Write(ctx, ctx.NewBatch(msg))
 			Expect(err).ToNot(HaveOccurred())
 
-			success := collector.WaitWithTimeout(10 * time.Second)
-			Expect(success).To(BeTrue(), "Expected to receive message within timeout")
-			Expect(collector.Messages()).To(HaveLen(1))
+			select {
+			case <-time.After(5 * time.Second):
+				Fail("Did not receive message within timeout")
+			case err := <-receivedErr:
+				Fail(fmt.Sprintf("Error reading message: %v", err))
+			case batch := <-received:
+				Expect(batch).ToNot(BeNil())
+				msgs := maps.Collect(batch.Messages())
+				Expect(msgs).To(HaveLen(1))
+			}
 		})
 	})
 })
