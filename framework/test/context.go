@@ -53,8 +53,8 @@ func (m *mockComponentContext) BuildMetadataFilter(patterns []string, invert boo
 	return nil, nil // Mock implementation
 }
 
-func (m *mockComponentContext) NewBatch() spec.Batch {
-	return &mockBatch{messages: make([]spec.Message, 0)}
+func (m *mockComponentContext) NewBatch(msgs ...spec.Message) spec.Batch {
+	return &mockBatch{messages: msgs}
 }
 
 func (m *mockComponentContext) NewMessage() spec.Message {
