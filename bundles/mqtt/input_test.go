@@ -31,6 +31,8 @@ var _ = Describe("Input", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		ctx = test.NewMockComponentContext()
+		err = input.Init(ctx)
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	AfterEach(func() {

@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/wombatwisdom/components/bundles/mqtt"
 	"github.com/wombatwisdom/components/framework/spec"
+	"github.com/wombatwisdom/components/framework/test"
 )
 
 var _ = Describe("Output", func() {
@@ -23,6 +24,7 @@ var _ = Describe("Output", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
+		ctx = test.NewMockComponentContext()
 		_ = output.Init(ctx)
 	})
 
