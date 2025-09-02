@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"context"
+	"errors"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/wombatwisdom/components/framework/spec"
 	"maps"
@@ -158,11 +159,34 @@ func (m *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 		specMsg.SetMetadata("mqtt_topic", msg.Topic())
 		specMsg.SetMetadata("mqtt_message_id", int(msg.MessageID()))
 
-		return ctx.NewBatch(specMsg), func(_ context.Context, res error) error {
-			if res == nil {
-				// only ack if not already auto-acked
+		return ctx.NewBatch(specMsg), func(ackCtx context.Context, res error) error {
+			// check for any errors in the component context
+			if err := ackCtx.Err(); err != nil {
 				if !m.InputConfig.EnableAutoAck {
-					msg.Ack()
+					var reason string
+					switch {
+					case errors.Is(err, context.Canceled):
+						reason = "context cancellation"
+					case errors.Is(err, context.DeadlineExceeded):
+						reason = "deadline exceeded"
+					default:
+						reason = "context error: " + err.Error()
+					}
+					m.log.Infof("Skipping ACK for message (topic: %s, id: %d) due to %s - message will be redelivered",
+						msg.Topic(), msg.MessageID(), reason)
+				}
+				return nil
+			}
+
+			if res == nil {
+				if !m.InputConfig.EnableAutoAck {
+					// Check if client is still connected before ACKing
+					if m.client != nil && m.client.IsConnected() {
+						msg.Ack()
+					} else {
+						m.log.Infof("Skipping ACK for message (topic: %s, id: %d) - client disconnected, message will be redelivered",
+							msg.Topic(), msg.MessageID())
+					}
 				}
 			}
 			return nil
