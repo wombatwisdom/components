@@ -14,6 +14,12 @@ import (
 	"github.com/wombatwisdom/components/framework/test"
 )
 
+func waitForSubscription(input *mqtt.Input) {
+	// Small delay to ensure subscription handlers are fully set up
+	// This is more reliable than checking connection state alone
+	time.Sleep(200 * time.Millisecond)
+}
+
 var _ = Describe("Input", func() {
 	var input *mqtt.Input
 	var ctx spec.ComponentContext
@@ -130,6 +136,8 @@ var _ = Describe("Input ACK behavior", func() {
 			err = input.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
+			waitForSubscription(input)
+
 			pubToken := publisher.Publish("ack-test/cancel", 1, false, []byte("test-no-ack"))
 			pubToken.Wait()
 			Expect(pubToken.Error()).ToNot(HaveOccurred())
@@ -192,6 +200,8 @@ var _ = Describe("Input ACK behavior", func() {
 			err = input.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
+			waitForSubscription(input)
+
 			pubToken := publisher.Publish("ack-test/disconnect", 1, false, []byte("test-disconnect"))
 			pubToken.Wait()
 			Expect(pubToken.Error()).ToNot(HaveOccurred())
@@ -229,6 +239,8 @@ var _ = Describe("Input ACK behavior", func() {
 
 			err = input.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
+
+			waitForSubscription(input)
 
 			pubToken := publisher.Publish("ack-test/auto", 1, false, []byte("test-auto-ack"))
 			pubToken.Wait()
