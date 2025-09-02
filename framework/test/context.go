@@ -64,22 +64,6 @@ func (m *mockComponentContext) NewMessage() spec.Message {
 	}
 }
 
-func (m *mockComponentContext) Resources() spec.ResourceManager {
-	return &mockResourceManager{ctx: m.ctx}
-}
-
-func (m *mockComponentContext) Input(name string) (spec.Input, error) {
-	return nil, spec.ErrNotConnected
-}
-
-func (m *mockComponentContext) Output(name string) (spec.Output, error) {
-	return nil, spec.ErrNotConnected
-}
-
-func (m *mockComponentContext) System(name string) (spec.System, error) {
-	return nil, spec.ErrNotConnected
-}
-
 // Mock implementations for testing
 
 type mockBatch struct {
