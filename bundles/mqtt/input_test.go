@@ -250,7 +250,7 @@ var _ = Describe("Input ACK behavior", func() {
 			input, err = mqtt.NewInput(env, mqtt.InputConfig{
 				CommonMQTTConfig: mqtt.CommonMQTTConfig{
 					Urls:     []string{url},
-					ClientId: "ACK_TEST_SUBSCRIBER_3",
+					ClientId: "ACK_TEST_SUBSCRIBER_3_VERIFY",
 				},
 				Filters: map[string]byte{
 					"ack-test/auto": 1,
