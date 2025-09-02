@@ -160,6 +160,7 @@ func (m *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 		specMsg.SetMetadata("mqtt_message_id", int(msg.MessageID()))
 
 		return ctx.NewBatch(specMsg), func(ackCtx context.Context, res error) error {
+			// check for any errors in the component context
 			if err := ackCtx.Err(); err != nil {
 				if !m.InputConfig.EnableAutoAck {
 					var reason string
@@ -178,9 +179,14 @@ func (m *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 			}
 
 			if res == nil {
-				// only ack if not already auto-acked
 				if !m.InputConfig.EnableAutoAck {
-					msg.Ack()
+					// Check if client is still connected before ACKing
+					if m.client != nil && m.client.IsConnected() {
+						msg.Ack()
+					} else {
+						m.log.Infof("Skipping ACK for message (topic: %s, id: %d) - client disconnected, message will be redelivered",
+							msg.Topic(), msg.MessageID())
+					}
 				}
 			}
 			return nil

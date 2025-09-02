@@ -174,6 +174,44 @@ var _ = Describe("Input ACK behavior", func() {
 			Expect(raw).To(Equal([]byte("test-no-ack")))
 		})
 
+		It("should handle ACK when client disconnects with valid context", func() {
+			var err error
+			input, err = mqtt.NewInput(env, mqtt.InputConfig{
+				CommonMQTTConfig: mqtt.CommonMQTTConfig{
+					Urls:     []string{url},
+					ClientId: "ACK_TEST_DISCONNECT",
+				},
+				Filters: map[string]byte{
+					"ack-test/disconnect": 1,
+				},
+				CleanSession:  false,
+				EnableAutoAck: false, // Manual ACK to test disconnect behavior
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			err = input.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			pubToken := publisher.Publish("ack-test/disconnect", 1, false, []byte("test-disconnect"))
+			pubToken.Wait()
+			Expect(pubToken.Error()).ToNot(HaveOccurred())
+
+			// Read the message and get the callback
+			_, callback, err := input.Read(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(callback).ToNot(BeNil())
+
+			// Forcibly disconnect the client to simulate network failure
+			input.Close(ctx) // disconnects the client
+
+			// Call callback with a VALID context (not cancelled)
+			validCtx := context.Background()
+
+			// This should NOT panic and should log about skipping ACK
+			err = callback(validCtx, nil)
+			Expect(err).ToNot(HaveOccurred()) // Should handle gracefully, no panic
+		})
+
 		It("should auto-ACK when EnableAutoAck is true", func() {
 			var err error
 			input, err = mqtt.NewInput(env, mqtt.InputConfig{
