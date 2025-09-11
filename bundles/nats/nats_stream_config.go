@@ -2,35 +2,28 @@
 
 package nats
 
-import (
-	"encoding/json"
-	"fmt"
-	"reflect"
-)
+import "encoding/json"
+import "fmt"
+import "reflect"
 
 type StreamConfig struct {
 	// Number of messages to fetch in a single batch. Only applies to inputs. Higher
 	// values can improve throughput but increase memory usage.
-	//
 	BatchSize int `json:"batch_size,omitempty" yaml:"batch_size,omitempty" mapstructure:"batch_size,omitempty"`
 
 	// Consumer configuration for input components. Only applies to inputs.
-	//
 	Consumer *StreamConfigConsumer `json:"consumer,omitempty" yaml:"consumer,omitempty" mapstructure:"consumer,omitempty"`
 
 	// Metadata handling configuration.
-	//
 	Metadata *StreamConfigMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty" mapstructure:"metadata,omitempty"`
 
 	// The name of the JetStream stream to consume from or publish to. This can be an
 	// expression that is evaluated for each message.
-	//
 	Stream string `json:"stream" yaml:"stream" mapstructure:"stream"`
 
 	// The subject pattern for the stream. For inputs, this is used to filter messages
 	// from the stream. For outputs, this is the subject to publish to. This can be an
 	// expression that is evaluated for each message.
-	//
 	Subject string `json:"subject" yaml:"subject" mapstructure:"subject"`
 }
 
@@ -39,38 +32,31 @@ type StreamConfigConsumer struct {
 	// The acknowledgment policy for the consumer. - none: No acknowledgment required
 	// - all: Acknowledge all messages in order - explicit: Acknowledge each message
 	// individually
-	//
 	AckPolicy StreamConfigConsumerAckPolicy `json:"ack_policy,omitempty" yaml:"ack_policy,omitempty" mapstructure:"ack_policy,omitempty"`
 
 	// Time to wait for acknowledgment before redelivering a message. Use Go duration
 	// format (e.g., "30s", "5m", "1h").
-	//
 	AckWait string `json:"ack_wait,omitempty" yaml:"ack_wait,omitempty" mapstructure:"ack_wait,omitempty"`
 
 	// The delivery policy for the consumer. - all: Deliver all messages in the stream
 	// - last: Deliver only the last message per subject - new: Deliver only new
 	// messages (from now)
-	//
 	DeliverPolicy StreamConfigConsumerDeliverPolicy `json:"deliver_policy,omitempty" yaml:"deliver_policy,omitempty" mapstructure:"deliver_policy,omitempty"`
 
 	// Whether to create a durable consumer. If true, the consumer will persist across
 	// restarts and continue from where it left off.
-	//
 	Durable bool `json:"durable,omitempty" yaml:"durable,omitempty" mapstructure:"durable,omitempty"`
 
 	// Additional subject filter for the consumer. If provided, the consumer will only
 	// receive messages matching this subject pattern.
-	//
 	FilterSubject *string `json:"filter_subject,omitempty" yaml:"filter_subject,omitempty" mapstructure:"filter_subject,omitempty"`
 
 	// Maximum number of delivery attempts for a message. After this many attempts,
 	// the message will be considered failed.
-	//
 	MaxDeliver int `json:"max_deliver,omitempty" yaml:"max_deliver,omitempty" mapstructure:"max_deliver,omitempty"`
 
 	// The name of the consumer. If not provided, an ephemeral consumer will be
 	// created.
-	//
 	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
 }
 
@@ -87,9 +73,9 @@ var enumValues_StreamConfigConsumerAckPolicy = []interface{}{
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *StreamConfigConsumerAckPolicy) UnmarshalJSON(value []byte) error {
+func (j *StreamConfigConsumerAckPolicy) UnmarshalJSON(b []byte) error {
 	var v string
-	if err := json.Unmarshal(value, &v); err != nil {
+	if err := json.Unmarshal(b, &v); err != nil {
 		return err
 	}
 	var ok bool
@@ -119,9 +105,9 @@ var enumValues_StreamConfigConsumerDeliverPolicy = []interface{}{
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *StreamConfigConsumerDeliverPolicy) UnmarshalJSON(value []byte) error {
+func (j *StreamConfigConsumerDeliverPolicy) UnmarshalJSON(b []byte) error {
 	var v string
-	if err := json.Unmarshal(value, &v); err != nil {
+	if err := json.Unmarshal(b, &v); err != nil {
 		return err
 	}
 	var ok bool
@@ -139,14 +125,14 @@ func (j *StreamConfigConsumerDeliverPolicy) UnmarshalJSON(value []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *StreamConfigConsumer) UnmarshalJSON(value []byte) error {
+func (j *StreamConfigConsumer) UnmarshalJSON(b []byte) error {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(value, &raw); err != nil {
+	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
 	type Plain StreamConfigConsumer
 	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
+	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
 	if v, ok := raw["ack_policy"]; !ok || v == nil {
@@ -164,9 +150,6 @@ func (j *StreamConfigConsumer) UnmarshalJSON(value []byte) error {
 	if v, ok := raw["max_deliver"]; !ok || v == nil {
 		plain.MaxDeliver = 5.0
 	}
-	if 1 > plain.MaxDeliver {
-		return fmt.Errorf("field %s: must be >= %v", "max_deliver", 1)
-	}
 	*j = StreamConfigConsumer(plain)
 	return nil
 }
@@ -175,24 +158,22 @@ func (j *StreamConfigConsumer) UnmarshalJSON(value []byte) error {
 type StreamConfigMetadata struct {
 	// List of metadata keys to include. If empty, all metadata is included. Use this
 	// to limit which headers are propagated to avoid noise.
-	//
 	Filter []string `json:"filter,omitempty" yaml:"filter,omitempty" mapstructure:"filter,omitempty"`
 
 	// Include JetStream metadata in message headers. This adds headers like stream
 	// name, sequence number, and timestamp.
-	//
 	IncludeStreamInfo bool `json:"include_stream_info,omitempty" yaml:"include_stream_info,omitempty" mapstructure:"include_stream_info,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *StreamConfigMetadata) UnmarshalJSON(value []byte) error {
+func (j *StreamConfigMetadata) UnmarshalJSON(b []byte) error {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(value, &raw); err != nil {
+	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
 	type Plain StreamConfigMetadata
 	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
+	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
 	if v, ok := raw["include_stream_info"]; !ok || v == nil {
@@ -203,9 +184,9 @@ func (j *StreamConfigMetadata) UnmarshalJSON(value []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *StreamConfig) UnmarshalJSON(value []byte) error {
+func (j *StreamConfig) UnmarshalJSON(b []byte) error {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(value, &raw); err != nil {
+	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
 	if _, ok := raw["stream"]; raw != nil && !ok {
@@ -216,17 +197,11 @@ func (j *StreamConfig) UnmarshalJSON(value []byte) error {
 	}
 	type Plain StreamConfig
 	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
+	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
 	if v, ok := raw["batch_size"]; !ok || v == nil {
 		plain.BatchSize = 1.0
-	}
-	if 1000 < plain.BatchSize {
-		return fmt.Errorf("field %s: must be <= %v", "batch_size", 1000)
-	}
-	if 1 > plain.BatchSize {
-		return fmt.Errorf("field %s: must be >= %v", "batch_size", 1)
 	}
 	*j = StreamConfig(plain)
 	return nil
