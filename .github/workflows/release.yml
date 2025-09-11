@@ -3,7 +3,8 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'      # Only final releases (v0.1.0)
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc*'  # Only RCs (v0.1.0-rc8)
 
 permissions:
   contents: write
