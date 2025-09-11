@@ -155,7 +155,7 @@ tasks:
           fi
       TAG_VERSION: "v{{.NEXT_RC}}"
     cmds:
-      - task: release:pre-check
+      - task: release:check
       - task: check
       - task: test
       - |
@@ -196,7 +196,7 @@ tasks:
           fi
       TAG_VERSION: "v{{.FINAL_VERSION}}"
     cmds:
-      - task: release:pre-check
+      - task: release:check
       - task: check
       - task: test
       - |
