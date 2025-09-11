@@ -207,7 +207,7 @@ var _ = Describe("Trigger-Retrieval Integration", func() {
 			emptyInput := NewMockTriggerInput([]spec.TriggerEvent{})
 			err := emptyInput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			defer emptyInput.Close(ctx)
+			defer func() { _ = emptyInput.Close(ctx) }()
 
 			// Should return no data error
 			triggerBatch, _, err := emptyInput.ReadTriggers(ctx)
@@ -232,11 +232,11 @@ var _ = Describe("Trigger-Retrieval Integration", func() {
 
 			err := testInput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			defer testInput.Close(ctx)
+			defer func() { _ = testInput.Close(ctx) }()
 
 			err = testProcessor.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			defer testProcessor.Close(ctx)
+			defer func() { _ = testProcessor.Close(ctx) }()
 
 			// Read triggers
 			triggerBatch, _, err := testInput.ReadTriggers(ctx)

@@ -108,7 +108,7 @@ func (so *StreamOutput) WriteMessage(ctx spec.ComponentContext, message spec.Mes
 	headers := make(nats.Header)
 
 	// Process metadata
-	var metadata map[string]string = make(map[string]string)
+	metadata := make(map[string]string)
 	for key, value := range message.Metadata() {
 		if strValue, ok := value.(string); ok {
 			metadata[key] = strValue

@@ -50,7 +50,7 @@ var _ = Describe("S3 Retrieval Processor Unit Tests", func() {
 	AfterEach(func() {
 		if processor != nil {
 			ctx := test.NewMockComponentContext()
-			processor.Close(ctx)
+			_ = processor.Close(ctx)
 		}
 	})
 

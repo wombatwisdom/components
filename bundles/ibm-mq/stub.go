@@ -14,7 +14,7 @@ import (
 
 // System stub implementation
 type System struct {
-	cfg SystemConfig
+	_ SystemConfig
 }
 
 func NewSystem(rawConfig string) (*System, error) {
@@ -39,8 +39,8 @@ func (s *System) Close(ctx context.Context) error {
 
 // Input stub implementation
 type Input struct {
-	sys spec.System
-	cfg InputConfig
+	_ spec.System
+	_ InputConfig
 }
 
 func NewInput(sys spec.System, rawConfig spec.Config) (*Input, error) {
