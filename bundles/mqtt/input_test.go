@@ -142,7 +142,7 @@ var _ = Describe("Input ACK behavior", func() {
 			pubToken.Wait()
 			Expect(pubToken.Error()).ToNot(HaveOccurred())
 
-			batch, callback, err := input.Read(ctx)
+			_, callback, err := input.Read(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(callback).ToNot(BeNil())
 
@@ -174,7 +174,7 @@ var _ = Describe("Input ACK behavior", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Should receive the message again as it wasn't ACKed
-			batch, _, err = input.Read(ctx)
+			batch, _, err := input.Read(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			msgs := maps.Collect(batch.Messages())
 			Expect(msgs).To(HaveLen(1))
@@ -212,7 +212,7 @@ var _ = Describe("Input ACK behavior", func() {
 			Expect(callback).ToNot(BeNil())
 
 			// Forcibly disconnect the client to simulate network failure
-			input.Close(ctx) // disconnects the client
+			_ = input.Close(ctx) // disconnects the client
 
 			// Call callback with a VALID context (not cancelled)
 			validCtx := context.Background()

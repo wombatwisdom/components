@@ -163,7 +163,7 @@ func (m *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 		return ctx.NewBatch(specMsg), func(ackCtx context.Context, res error) error {
 			// check for any errors in the component context
 			if err := ackCtx.Err(); err != nil {
-				if !m.InputConfig.EnableAutoAck {
+				if !m.EnableAutoAck {
 					var reason string
 					switch {
 					case errors.Is(err, context.Canceled):
@@ -180,7 +180,7 @@ func (m *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 			}
 
 			if res == nil {
-				if !m.InputConfig.EnableAutoAck {
+				if !m.EnableAutoAck {
 					// Check if client is still connected before ACKing
 					if m.client != nil && m.client.IsConnected() {
 						msg.Ack()
