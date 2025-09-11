@@ -3,11 +3,12 @@ package mqtt
 import (
 	"context"
 	"errors"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/wombatwisdom/components/framework/spec"
 	"maps"
 	"sync"
 	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/wombatwisdom/components/framework/spec"
 )
 
 type InputConfig struct {
