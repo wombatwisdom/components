@@ -68,12 +68,16 @@ var _ = Describe("Output Topic Interpolation", func() {
 	})
 
 	Describe("Dynamic Topic Publishing", func() {
-		var receivedMessages map[string]mqtt3.Message
+		type receivedMsg struct {
+			topic   string
+			message mqtt3.Message
+		}
+		var msgChan chan receivedMsg
 		var client mqtt3.Client
 		var ready chan struct{}
 
 		BeforeEach(func() {
-			receivedMessages = make(map[string]mqtt3.Message)
+			msgChan = make(chan receivedMsg, 10)
 			ready = make(chan struct{})
 
 			// Set up MQTT client to subscribe to multiple topics
@@ -83,17 +87,17 @@ var _ = Describe("Output Topic Interpolation", func() {
 				SetOnConnectHandler(func(c mqtt3.Client) {
 					// Subscribe to wildcard to catch all test messages
 					tok := c.Subscribe("test/+/+", 1, func(client mqtt3.Client, msg mqtt3.Message) {
-						receivedMessages[msg.Topic()] = msg
+						msgChan <- receivedMsg{topic: msg.Topic(), message: msg}
 					})
 					tok.Wait()
 
 					// Also subscribe to specific topics
 					c.Subscribe("devices/+/data", 1, func(client mqtt3.Client, msg mqtt3.Message) {
-						receivedMessages[msg.Topic()] = msg
+						msgChan <- receivedMsg{topic: msg.Topic(), message: msg}
 					})
 
 					c.Subscribe("data/output/+", 1, func(client mqtt3.Client, msg mqtt3.Message) {
-						receivedMessages[msg.Topic()] = msg
+						msgChan <- receivedMsg{topic: msg.Topic(), message: msg}
 					})
 
 					close(ready)
@@ -108,6 +112,7 @@ var _ = Describe("Output Topic Interpolation", func() {
 
 		AfterEach(func() {
 			client.Disconnect(250)
+			close(msgChan) // Clean up the channel
 		})
 
 		It("should publish to dynamic topic based on message content", func() {
@@ -131,10 +136,9 @@ var _ = Describe("Output Topic Interpolation", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Check if message was received on the expected topic
-			Eventually(func() bool {
-				_, ok := receivedMessages["devices/sensor123/data"]
-				return ok
-			}, "5s").Should(BeTrue())
+			Eventually(msgChan, "5s").Should(Receive(WithTransform(func(msg receivedMsg) string {
+				return msg.topic
+			}, Equal("devices/sensor123/data"))))
 		})
 
 		It("should handle metadata in topic expressions", func() {
@@ -158,10 +162,9 @@ var _ = Describe("Output Topic Interpolation", func() {
 			err = output.Write(ctx, ctx.NewBatch(msg))
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(func() bool {
-				_, ok := receivedMessages["test/sensors/temperature"]
-				return ok
-			}, "5s").Should(BeTrue())
+			Eventually(msgChan, "5s").Should(Receive(WithTransform(func(msg receivedMsg) string {
+				return msg.topic
+			}, Equal("test/sensors/temperature"))))
 		})
 	})
 
