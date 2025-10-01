@@ -150,10 +150,6 @@ func TestInterpolatedExpressionOptimized(t *testing.T) {
 			result, err := expr.EvalString(nil)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectResult, result)
-
-			// The key test is that this should be efficient
-			// We can't easily test the internal structure without reflection
-			// but we can verify the behavior is correct
 		})
 	}
 }

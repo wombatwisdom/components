@@ -1,7 +1,7 @@
 package mqtt_test
 
 import (
-	mqtt "github.com/wombatwisdom/components/bundles/mqtt"
+	"github.com/wombatwisdom/components/bundles/mqtt"
 	"github.com/wombatwisdom/components/framework/spec"
 	"github.com/wombatwisdom/components/framework/test"
 
@@ -20,7 +20,7 @@ var _ = Describe("MQTT Output with Interpolation", func() {
 		It("should handle static topic", func() {
 			config := mqtt.Config{
 				Mqtt: mqtt.MqttConfig{
-					Urls:     []string{"tcp://localhost:1883"},
+					Urls:     []string{url},
 					ClientId: "test-client",
 					Topic:    "test/static",
 				},
@@ -34,7 +34,7 @@ var _ = Describe("MQTT Output with Interpolation", func() {
 		It("should handle interpolated topic", func() {
 			config := mqtt.Config{
 				Mqtt: mqtt.MqttConfig{
-					Urls:     []string{"tcp://localhost:1883"},
+					Urls:     []string{url},
 					ClientId: "test-client",
 					Topic:    `test/output/${!json.topic}`,
 				},
@@ -48,7 +48,7 @@ var _ = Describe("MQTT Output with Interpolation", func() {
 		It("should handle escaped interpolation", func() {
 			config := mqtt.Config{
 				Mqtt: mqtt.MqttConfig{
-					Urls:     []string{"tcp://localhost:1883"},
+					Urls:     []string{url},
 					ClientId: "test-client",
 					Topic:    `test/${{!literal}}`,
 				},
@@ -63,7 +63,7 @@ var _ = Describe("MQTT Output with Interpolation", func() {
 			ctx := test.NewMockComponentContext()
 			config := mqtt.Config{
 				Mqtt: mqtt.MqttConfig{
-					Urls:     []string{"tcp://localhost:1883"},
+					Urls:     []string{url},
 					ClientId: "test-client",
 					Topic:    `test/${!unclosed`,
 				},
@@ -84,7 +84,7 @@ var _ = Describe("MQTT Output with Interpolation", func() {
 			ctx := test.NewMockComponentContext()
 			config := mqtt.Config{
 				Mqtt: mqtt.MqttConfig{
-					Urls:     []string{"tcp://localhost:1883"},
+					Urls:     []string{url},
 					ClientId: "test-client",
 					Topic:    `sensors/${!json.location}/${!json.type}`,
 				},
@@ -100,9 +100,6 @@ var _ = Describe("MQTT Output with Interpolation", func() {
 			msg := ctx.NewMessage()
 			msg.SetRaw([]byte(`{"location": "warehouse", "type": "temperature"}`))
 			_ = ctx.NewBatch(msg)
-
-			// Note: This would normally connect to MQTT and send, but without a running broker it will fail
-			// The important part is that the topic expression is parsed successfully
 		})
 	})
 })
