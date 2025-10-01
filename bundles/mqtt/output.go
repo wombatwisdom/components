@@ -4,23 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/wombatwisdom/components/framework/spec"
 )
 
-type OutputConfig struct {
-	CommonMQTTConfig
+type Config struct {
+	Mqtt MqttConfig
 
-	TopicExpr        string        `json:"topic_expr" yaml:"topic_expr"`
-	WriteTimeout     time.Duration `json:"write_timeout" yaml:"write_timeout"`
-	RetainedExpr     string        `json:"retained_expr" yaml:"retained_expr"`
-	QOS              byte          `json:"qos" yaml:"qos"`
-	FailBatchOnError bool          `json:"fail_batch_on_error" yaml:"fail_batch_on_error"`
+	Topic spec.Expression
 }
 
-func NewOutput(env spec.Environment, config OutputConfig) (*Output, error) {
+func NewOutput(env spec.Environment, config Config) (*Output, error) {
 	return &Output{
 		config: config,
 		log:    env,
@@ -28,15 +23,14 @@ func NewOutput(env spec.Environment, config OutputConfig) (*Output, error) {
 }
 
 type Output struct {
-	config OutputConfig
+	config Config
 
 	log spec.Logger
 
-	topic    spec.Expression
-	retained spec.Expression
+	topic spec.Expression
 
 	client  mqtt.Client
-	connMut sync.RWMutex
+	connMut sync.RWMutex // TODO: replace this with something more idiomatic
 }
 
 func (m *Output) Init(ctx spec.ComponentContext) error {
@@ -48,24 +42,17 @@ func (m *Output) Init(ctx spec.ComponentContext) error {
 	}
 
 	var err error
-	m.topic, err = ctx.ParseExpression(m.config.TopicExpr)
+	m.topic, err = ctx.ParseExpression(m.config.Mqtt.Topic)
 	if err != nil {
-		return fmt.Errorf("failed to parse topic expression: %w", err)
+		return fmt.Errorf("failed to parse Topic expression: %w", err)
 	}
 
-	if m.retained != nil {
-		m.retained, err = ctx.ParseExpression(m.config.RetainedExpr)
-		if err != nil {
-			return fmt.Errorf("failed to parse retained expression: %w", err)
-		}
-	}
-
-	opts := NewClientOptions(m.config.CommonMQTTConfig).
+	opts := NewClientOptions(m.config.Mqtt).
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
 			client.Disconnect(0)
 			m.log.Errorf("Connection lost due to: %v", reason)
 		}).
-		SetWriteTimeout(m.config.WriteTimeout)
+		SetWriteTimeout(m.config.Mqtt.WriteTimeout)
 
 	client := mqtt.NewClient(opts)
 
@@ -104,25 +91,12 @@ func (m *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
 		exprCtx := spec.MessageExpressionContext(message)
 
 		var err error
-		retained := false
-		if m.retained != nil {
-			retained, err = m.retained.EvalBool(exprCtx)
-			if err != nil {
-				errs = errors.Join(errs, fmt.Errorf("retained interpolation error: %w", err))
-
-				if m.config.FailBatchOnError {
-					break
-				} else {
-					continue
-				}
-			}
-		}
 
 		topicStr, err := m.topic.EvalString(exprCtx)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("topic interpolation error: %w", err))
 
-			if m.config.FailBatchOnError {
+			if m.config.Mqtt.FailBatchOnError {
 				break
 			} else {
 				continue
@@ -132,14 +106,14 @@ func (m *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
 		mb, err := message.Raw()
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to access message data: %w", err))
-			if m.config.FailBatchOnError {
+			if m.config.Mqtt.FailBatchOnError {
 				break
 			} else {
 				continue
 			}
 		}
 
-		mtok := client.Publish(topicStr, m.config.QOS, retained, mb)
+		mtok := client.Publish(topicStr, m.config.Mqtt.QOS, m.config.Mqtt.Retained, mb)
 		mtok.Wait()
 		sendErr := mtok.Error()
 		if errors.Is(sendErr, mqtt.ErrNotConnected) {
@@ -154,7 +128,7 @@ func (m *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
 		} else {
 			m.log.Errorf("Failed to send message to topic %s: %v", topicStr, sendErr)
 			errs = errors.Join(errs, sendErr)
-			if m.config.FailBatchOnError {
+			if m.config.Mqtt.FailBatchOnError {
 				break
 			} else {
 				continue

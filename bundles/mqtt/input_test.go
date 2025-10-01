@@ -27,7 +27,7 @@ var _ = Describe("Input", func() {
 	BeforeEach(func() {
 		var err error
 		input, err = mqtt.NewInput(env, mqtt.InputConfig{
-			CommonMQTTConfig: mqtt.CommonMQTTConfig{
+			MqttConfig: mqtt.MqttConfig{
 				Urls:     []string{url},
 				ClientId: "SINK",
 			},
@@ -121,7 +121,7 @@ var _ = Describe("Input ACK behavior", func() {
 		It("should NOT ACK message when context is cancelled", func() {
 			var err error
 			input, err = mqtt.NewInput(env, mqtt.InputConfig{
-				CommonMQTTConfig: mqtt.CommonMQTTConfig{
+				MqttConfig: mqtt.MqttConfig{
 					Urls:     []string{url},
 					ClientId: "ACK_TEST_SUBSCRIBER_2",
 				},
@@ -158,7 +158,7 @@ var _ = Describe("Input ACK behavior", func() {
 			_ = input.Close(ctx)
 
 			input, err = mqtt.NewInput(env, mqtt.InputConfig{
-				CommonMQTTConfig: mqtt.CommonMQTTConfig{
+				MqttConfig: mqtt.MqttConfig{
 					Urls:     []string{url},
 					ClientId: "ACK_TEST_SUBSCRIBER_2",
 				},
@@ -185,7 +185,7 @@ var _ = Describe("Input ACK behavior", func() {
 		It("should handle ACK when client disconnects with valid context", func() {
 			var err error
 			input, err = mqtt.NewInput(env, mqtt.InputConfig{
-				CommonMQTTConfig: mqtt.CommonMQTTConfig{
+				MqttConfig: mqtt.MqttConfig{
 					Urls:     []string{url},
 					ClientId: "ACK_TEST_DISCONNECT",
 				},
@@ -225,7 +225,7 @@ var _ = Describe("Input ACK behavior", func() {
 		It("should auto-ACK when EnableAutoAck is true", func() {
 			var err error
 			input, err = mqtt.NewInput(env, mqtt.InputConfig{
-				CommonMQTTConfig: mqtt.CommonMQTTConfig{
+				MqttConfig: mqtt.MqttConfig{
 					Urls:     []string{url},
 					ClientId: "ACK_TEST_SUBSCRIBER_3",
 				},
@@ -260,7 +260,7 @@ var _ = Describe("Input ACK behavior", func() {
 			_ = input.Close(ctx)
 
 			input, err = mqtt.NewInput(env, mqtt.InputConfig{
-				CommonMQTTConfig: mqtt.CommonMQTTConfig{
+				MqttConfig: mqtt.MqttConfig{
 					Urls:     []string{url},
 					ClientId: "ACK_TEST_SUBSCRIBER_3_VERIFY",
 				},
