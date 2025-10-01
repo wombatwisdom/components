@@ -9,4 +9,6 @@ type ComponentContext interface {
 	MetadataFilterFactory
 
 	Context() context.Context
+
+	ParseInterpolatedExpression(expr string) (InterpolatedExpression, error)
 }

@@ -35,7 +35,7 @@ var _ = Describe("Roundtrip", func() {
 			Mqtt: mqtt.MqttConfig{
 				Urls:     []string{url},
 				ClientId: uuid.New().String(),
-				Topic:    `"test"`,
+				Topic:    "test",
 				QOS:      1,
 			},
 		})

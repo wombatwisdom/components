@@ -41,7 +41,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require golang.org/x/text v0.26.0
+require (
+	github.com/stretchr/testify v1.8.4
+	golang.org/x/text v0.26.0
+)
 
 require (
 	github.com/aws/aws-sdk-go v1.44.256 // indirect
@@ -59,6 +62,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.34.0 // indirect
 	github.com/aws/smithy-go v1.22.4 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
@@ -68,6 +72,7 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rs/xid v1.4.0 // indirect
 	github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 // indirect
 	go.shabbyrobe.org/gocovmerge v0.0.0-20230507111327-fa4f82cfbf4d // indirect

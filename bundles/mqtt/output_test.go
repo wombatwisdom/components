@@ -19,7 +19,7 @@ var _ = Describe("MQTTOutput", func() {
 			Mqtt: wwmqtt.MqttConfig{
 				Urls:     []string{url},
 				ClientId: "SINK",
-				Topic:    `"test/output/" + json.topic`,
+				Topic:    "test/output/${! json.topic }",
 			},
 		})
 		Expect(err).ToNot(HaveOccurred())

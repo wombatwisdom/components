@@ -11,8 +11,6 @@ import (
 
 type Config struct {
 	Mqtt MqttConfig
-
-	Topic spec.Expression
 }
 
 func NewOutput(env spec.Environment, config Config) (*Output, error) {
@@ -27,7 +25,7 @@ type Output struct {
 
 	log spec.Logger
 
-	topic spec.Expression
+	topic spec.InterpolatedExpression
 
 	client  mqtt.Client
 	connMut sync.RWMutex // TODO: replace this with something more idiomatic
@@ -42,7 +40,7 @@ func (m *Output) Init(ctx spec.ComponentContext) error {
 	}
 
 	var err error
-	m.topic, err = ctx.ParseExpression(m.config.Mqtt.Topic)
+	m.topic, err = ctx.ParseInterpolatedExpression(m.config.Mqtt.Topic)
 	if err != nil {
 		return fmt.Errorf("failed to parse Topic expression: %w", err)
 	}
