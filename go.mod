@@ -30,9 +30,9 @@ require (
 	github.com/mochi-mqtt/server/v2 v2.7.9
 
 	// NATS dependencies
-	github.com/nats-io/jwt/v2 v2.7.4
-	github.com/nats-io/nats-server/v2 v2.11.4
-	github.com/nats-io/nats.go v1.43.0
+	github.com/nats-io/jwt/v2 v2.8.0
+	github.com/nats-io/nats-server/v2 v2.12.0
+	github.com/nats-io/nats.go v1.45.0
 	github.com/nats-io/nkeys v0.4.11
 
 	// Testing dependencies
@@ -43,10 +43,11 @@ require (
 
 require (
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/text v0.26.0
+	golang.org/x/text v0.29.0
 )
 
 require (
+	github.com/antithesishq/antithesis-sdk-go v0.4.3-default-no-op // indirect
 	github.com/aws/aws-sdk-go v1.44.256 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.11 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.32 // indirect
@@ -77,10 +78,10 @@ require (
 	github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 // indirect
 	go.shabbyrobe.org/gocovmerge v0.0.0-20230507111327-fa4f82cfbf4d // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
-	golang.org/x/crypto v0.38.0 // indirect
-	golang.org/x/net v0.40.0 // indirect
-	golang.org/x/sync v0.15.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.33.0 // indirect
+	golang.org/x/crypto v0.42.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/time v0.13.0 // indirect
+	golang.org/x/tools v0.36.0 // indirect
 )
