@@ -19,7 +19,7 @@ var _ = Describe("MQTTOutput", func() {
 			Mqtt: wwmqtt.MqttConfig{
 				Urls:     []string{url},
 				ClientId: "SINK",
-				Topic:    `"test"`,
+				Topic:    `"test/output/" + json.topic`,
 			},
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -34,14 +34,14 @@ var _ = Describe("MQTTOutput", func() {
 
 	When("sending a message using the output", func() {
 		It("should put the message on the MQTT server", func() {
-			msg := spec.NewBytesMessage([]byte("hello, world"))
+			msg := spec.NewBytesMessage([]byte(`{"topic": "cat"}`))
 			b, err := msg.Raw()
 			Expect(err).ToNot(HaveOccurred())
 
 			recv := make(chan mqtt3.Message)
 			ready := make(chan struct{})
 			tc := mqtt3.NewClient(mqtt3.NewClientOptions().AddBroker(url).SetOnConnectHandler(func(c mqtt3.Client) {
-				tok := c.Subscribe("test", 1, func(client mqtt3.Client, msg mqtt3.Message) {
+				tok := c.Subscribe("test/output/cat", 1, func(client mqtt3.Client, msg mqtt3.Message) {
 					recv <- msg
 				})
 				tok.Wait()
