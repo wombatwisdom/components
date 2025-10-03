@@ -2,90 +2,75 @@ package spec
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
 )
 
-// ExprLangExpressionFactory implements ExpressionFactory using expr-lang
-type ExprLangExpressionFactory struct{}
-
-// NewExprLangExpressionFactory creates a new expression factory using expr-lang
-func NewExprLangExpressionFactory() ExpressionFactory {
-	return &ExprLangExpressionFactory{}
+type part interface {
+	Eval(ctx ExpressionContext) (any, error)
 }
 
-func (e *ExprLangExpressionFactory) ParseExpression(exprStr string) (Expression, error) {
-	// Compile the expression
-	program, err := expr.Compile(exprStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compile expression '%s': %w", exprStr, err)
+type stringPart struct {
+	value string
+}
+
+func (s *stringPart) Eval(ctx ExpressionContext) (any, error) {
+	return s.value, nil
+}
+
+type exprPart struct {
+	source string
+	ex     *vm.Program
+}
+
+func (e *exprPart) Eval(ctx ExpressionContext) (any, error) {
+	return vm.Run(e.ex, ctx)
+}
+
+func NewExprLangExpression(exprStr string) (Expression, error) {
+	splits := strings.Split(exprStr, "${!")
+	parts := make([]part, len(splits))
+	for idx, s := range splits {
+		if strings.Contains(s, "}") {
+			expression := strings.TrimSuffix(s, "}")
+
+			// Compile the expression
+			program, err := expr.Compile(expression)
+			if err != nil {
+				return nil, fmt.Errorf("failed to compile expression '%s': %w", exprStr, err)
+			}
+
+			parts[idx] = &exprPart{source: expression, ex: program}
+		} else {
+			parts[idx] = &stringPart{value: s}
+		}
 	}
 
 	return &exprLangExpression{
-		program: program,
-		source:  exprStr,
+		parts:  parts,
+		source: exprStr,
 	}, nil
 }
 
 // exprLangExpression implements Expression using expr-lang
 type exprLangExpression struct {
-	program *vm.Program
-	source  string
+	parts  []part
+	source string
 }
 
-func (e *exprLangExpression) EvalString(ctx ExpressionContext) (string, error) {
-	result, err := vm.Run(e.program, ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to evaluate expression '%s': %w", e.source, err)
+func (e *exprLangExpression) Eval(ctx ExpressionContext) (string, error) {
+	result := strings.Builder{}
+	for _, p := range e.parts {
+		res, err := p.Eval(ctx)
+		if err != nil {
+			return "", err
+		}
+
+		if res != nil {
+			result.WriteString(fmt.Sprintf("%v", res))
+		}
 	}
-
-	if result == nil {
-		return "", nil
-	}
-
-	if str, ok := result.(string); ok {
-		return str, nil
-	}
-
-	return fmt.Sprintf("%v", result), nil
-}
-
-func (e *exprLangExpression) EvalInt(ctx ExpressionContext) (int, error) {
-	result, err := vm.Run(e.program, ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to evaluate expression '%s': %w", e.source, err)
-	}
-
-	if result == nil {
-		return 0, nil
-	}
-
-	switch v := result.(type) {
-	case int:
-		return v, nil
-	case int64:
-		return int(v), nil
-	case float64:
-		return int(v), nil
-	default:
-		return 0, fmt.Errorf("expression '%s' evaluated to %T, expected numeric type", e.source, result)
-	}
-}
-
-func (e *exprLangExpression) EvalBool(ctx ExpressionContext) (bool, error) {
-	result, err := vm.Run(e.program, ctx)
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate expression '%s': %w", e.source, err)
-	}
-
-	if result == nil {
-		return false, nil
-	}
-
-	if b, ok := result.(bool); ok {
-		return b, nil
-	}
-
-	return false, fmt.Errorf("expression '%s' evaluated to %T, expected bool", e.source, result)
+	return result.String(), nil
 }

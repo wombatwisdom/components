@@ -4,7 +4,6 @@ import "context"
 
 type ComponentContext interface {
 	Logger
-	ExpressionFactory
 	MessageFactory
 	MetadataFilterFactory
 

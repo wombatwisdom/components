@@ -15,16 +15,22 @@ var _ = Describe("Output", func() {
 
 	BeforeEach(func() {
 		var err error
-		output, err = mqtt.NewOutput(env, mqtt.OutputConfig{
+		ctx = test.NewMockComponentContext()
+
+		topic, err := spec.NewExprLangExpression("${!\"test\"}")
+		Expect(err).ToNot(HaveOccurred())
+
+		cfg := mqtt.OutputConfig{
 			CommonMQTTConfig: mqtt.CommonMQTTConfig{
 				Urls:     []string{url},
 				ClientId: "SINK",
 			},
-			TopicExpr: "\"test\"",
-		})
+			TopicExpr: topic,
+		}
+
+		output, err = mqtt.NewOutput(env, cfg)
 		Expect(err).ToNot(HaveOccurred())
 
-		ctx = test.NewMockComponentContext()
 		_ = output.Init(ctx)
 	})
 
