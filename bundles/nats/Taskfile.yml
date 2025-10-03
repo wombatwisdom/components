@@ -20,7 +20,6 @@ tasks:
   validate:
     desc: Validate the component
     cmds:
-      - task: generate
       - task: common:validate
         vars:
           COMPONENT_NAME: "{{.COMPONENT_NAME}}"
