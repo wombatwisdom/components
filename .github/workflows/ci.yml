@@ -41,7 +41,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24
+        go-version: 1.25.1
 
     - name: Cache Go modules
       uses: actions/cache@v4
@@ -49,9 +49,9 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-1.24-${{ hashFiles('go.work.sum', '**/go.sum') }}
+        key: ${{ runner.os }}-go-1.25.1-${{ hashFiles('go.work.sum', '**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-1.24-
+          ${{ runner.os }}-go-1.25.1-
 
     - name: Install Task
       uses: arduino/setup-task@v2
@@ -94,7 +94,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24
+        go-version: 1.25.1
 
     - name: Install Task
       uses: arduino/setup-task@v2
@@ -121,7 +121,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24
+        go-version: 1.25.1
 
     - name: Install Task
       uses: arduino/setup-task@v2
@@ -148,7 +148,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24
+        go-version: 1.25.1
 
     - name: Run basic security checks
       run: |
