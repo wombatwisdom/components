@@ -35,9 +35,6 @@ type Output struct {
 	sys spec.System
 	cfg OutputConfig
 
-	subject        spec.Expression
-	metadataFilter spec.MetadataFilter
-
 	nc *nats.Conn
 }
 
@@ -47,20 +44,8 @@ func (o *Output) Init(ctx spec.ComponentContext) error {
 		return fmt.Errorf("nats client is not of type *nats.Conn")
 	}
 
-	// -- create the subject expression
-	if o.cfg.Subject == "" {
-		return fmt.Errorf("subject is required")
-	}
-
-	var err error
-	if o.subject, err = ctx.ParseExpression(o.cfg.Subject); err != nil {
-		return fmt.Errorf("subject: %w", err)
-	}
-
-	if o.cfg.Metadata != nil {
-		if o.metadataFilter, err = ctx.BuildMetadataFilter(o.cfg.Metadata.Patterns, o.cfg.Metadata.Invert); err != nil {
-			return fmt.Errorf("metadata: %w", err)
-		}
+	if o.cfg.Subject == nil {
+		return fmt.Errorf("subject must be specified")
 	}
 
 	return nil
@@ -81,7 +66,7 @@ func (o *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
 }
 
 func (o *Output) WriteMessage(ctx spec.ComponentContext, message spec.Message) error {
-	subject, err := o.subject.EvalString(spec.MessageExpressionContext(message))
+	subject, err := o.cfg.Subject.Eval(spec.MessageExpressionContext(message))
 	if err != nil {
 		return fmt.Errorf("subject: %w", err)
 	}
@@ -96,7 +81,7 @@ func (o *Output) WriteMessage(ctx spec.ComponentContext, message spec.Message) e
 	msg.Header = make(map[string][]string)
 	for key, value := range message.Metadata() {
 		// -- skip the metadata if the filter is set and the key is not included
-		if o.metadataFilter != nil && !o.metadataFilter.Include(key) {
+		if o.cfg.MetadataFilter != nil && !o.cfg.MetadataFilter.Include(key) {
 			return nil
 		}
 

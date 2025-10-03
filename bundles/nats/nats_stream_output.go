@@ -20,10 +20,6 @@ type StreamOutput struct {
 	sys spec.System
 	cfg StreamConfig
 
-	stream         spec.Expression
-	subject        spec.Expression
-	metadataFilter spec.MetadataFilter
-
 	js jetstream.JetStream
 }
 
@@ -48,26 +44,6 @@ func (so *StreamOutput) Init(ctx spec.ComponentContext) error {
 	}
 	so.js = js
 
-	// Parse expressions
-	var err error
-	so.stream, err = ctx.ParseExpression(so.cfg.Stream)
-	if err != nil {
-		return fmt.Errorf("failed to parse stream expression: %w", err)
-	}
-
-	so.subject, err = ctx.ParseExpression(so.cfg.Subject)
-	if err != nil {
-		return fmt.Errorf("failed to parse subject expression: %w", err)
-	}
-
-	// Setup metadata filter if configured
-	if so.cfg.Metadata != nil && len(so.cfg.Metadata.Filter) > 0 {
-		so.metadataFilter, err = ctx.BuildMetadataFilter(so.cfg.Metadata.Filter, false)
-		if err != nil {
-			return fmt.Errorf("failed to build metadata filter: %w", err)
-		}
-	}
-
 	return nil
 }
 
@@ -86,13 +62,13 @@ func (so *StreamOutput) Write(ctx spec.ComponentContext, batch spec.Batch) error
 
 func (so *StreamOutput) WriteMessage(ctx spec.ComponentContext, message spec.Message) error {
 	// Evaluate stream name
-	streamName, err := so.stream.EvalString(spec.MessageExpressionContext(message))
+	streamName, err := so.cfg.Stream.Eval(spec.MessageExpressionContext(message))
 	if err != nil {
 		return fmt.Errorf("failed to evaluate stream name: %w", err)
 	}
 
 	// Evaluate subject
-	subject, err := so.subject.EvalString(spec.MessageExpressionContext(message))
+	subject, err := so.cfg.Subject.Eval(spec.MessageExpressionContext(message))
 	if err != nil {
 		return fmt.Errorf("failed to evaluate subject: %w", err)
 	}
@@ -118,10 +94,10 @@ func (so *StreamOutput) WriteMessage(ctx spec.ComponentContext, message spec.Mes
 	}
 
 	// Apply metadata filter if configured
-	if so.metadataFilter != nil {
+	if so.cfg.MetadataFilter != nil {
 		filtered := make(map[string]string)
 		for key, value := range metadata {
-			if so.metadataFilter.Include(key) {
+			if so.cfg.MetadataFilter.Include(key) {
 				filtered[key] = value
 			}
 		}
@@ -161,16 +137,9 @@ func (so *StreamOutput) WriteMessage(ctx spec.ComponentContext, message spec.Mes
 	}
 
 	// Publish message using JetStream context
-	pubAck, err := so.js.Publish(context.Background(), subject, msgData, publishOpts...)
+	_, err = so.js.Publish(context.Background(), subject, msgData, publishOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to publish message to stream %s: %w", streamName, err)
-	}
-
-	// Log successful publish for debugging (optional metadata)
-	if so.cfg.Metadata == nil || so.cfg.Metadata.IncludeStreamInfo {
-		// We could add publish acknowledgment info to message metadata if needed
-		// but for output components, this is typically not necessary
-		_ = pubAck // Suppress unused variable warning
 	}
 
 	return nil

@@ -44,11 +44,6 @@ func (m *mockComponentContext) Errorf(format string, args ...interface{}) {
 	m.env.Errorf(format, args...)
 }
 
-func (m *mockComponentContext) ParseExpression(expr string) (spec.Expression, error) {
-	factory := spec.NewExprLangExpressionFactory()
-	return factory.ParseExpression(expr)
-}
-
 func (m *mockComponentContext) BuildMetadataFilter(patterns []string, invert bool) (spec.MetadataFilter, error) {
 	return nil, nil // Mock implementation
 }

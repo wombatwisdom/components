@@ -17,21 +17,9 @@ includes:
     taskfile: ../_common/Taskfile.yml
 
 tasks:
-  generate:
-    desc: Generate code from schemas
-    cmds:
-      - |
-        if [ {{len .SCHEMA_MAPPINGS_LIST}} -gt 0 ] && [ -n "{{.COMPONENT_NAME}}" ]; then
-          go-jsonschema --struct-name-from-title \
-            --package {{.COMPONENT_NAME}} \
-            {{range .SCHEMA_MAPPINGS_LIST}}--schema-output={{.}} {{end}}\
-            *.schema.yaml > /dev/null
-        fi
-
   validate:
     desc: Validate the component
     cmds:
-      - task: generate
       - task: common:validate
         vars:
           COMPONENT_NAME: "{{.COMPONENT_NAME}}"
@@ -64,7 +52,6 @@ tasks:
   build:
     desc: Build the component
     cmds:
-      - task: generate
       - task: common:build
         vars:
           COMPONENT_NAME: "{{.COMPONENT_NAME}}"

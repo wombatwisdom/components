@@ -31,17 +31,20 @@ var _ = Describe("Roundtrip", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
+		ctx = test.NewMockComponentContext()
+
+		topic, err := spec.NewExprLangExpression("${!\"test\"}")
+		Expect(err).ToNot(HaveOccurred())
+
 		output, err = mqtt.NewOutput(env, mqtt.OutputConfig{
 			CommonMQTTConfig: mqtt.CommonMQTTConfig{
 				Urls:     []string{url},
 				ClientId: uuid.New().String(),
 			},
 			QOS:       1,
-			TopicExpr: "\"test\"",
+			TopicExpr: topic,
 		})
 		Expect(err).ToNot(HaveOccurred())
-
-		ctx = test.NewMockComponentContext()
 
 		err = output.Init(ctx)
 		Expect(err).ToNot(HaveOccurred())

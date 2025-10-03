@@ -2,20 +2,17 @@ package spec
 
 import "encoding/json"
 
-type ExpressionFactory interface {
-	ParseExpression(expr string) (Expression, error)
-}
-
 type ExpressionContext map[string]any
 
 type Expression interface {
-	EvalString(ctx ExpressionContext) (string, error)
-	EvalInt(ctx ExpressionContext) (int, error)
-	EvalBool(ctx ExpressionContext) (bool, error)
+	Eval(ctx ExpressionContext) (string, error)
 }
 
 func MessageExpressionContext(msg Message) ExpressionContext {
 	ctx := make(ExpressionContext)
+
+	// Add message
+	ctx["message"] = msg
 
 	// Add message content
 	if raw, err := msg.Raw(); err == nil {
