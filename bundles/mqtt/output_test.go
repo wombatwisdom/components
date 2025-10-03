@@ -1,26 +1,26 @@
 package mqtt_test
 
 import (
-	mqtt2 "github.com/eclipse/paho.mqtt.golang"
+	mqtt3 "github.com/eclipse/paho.mqtt.golang"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/wombatwisdom/components/bundles/mqtt"
+	wwmqtt "github.com/wombatwisdom/components/bundles/mqtt"
 	"github.com/wombatwisdom/components/framework/spec"
 	"github.com/wombatwisdom/components/framework/test"
 )
 
-var _ = Describe("Output", func() {
-	var output *mqtt.Output
+var _ = Describe("MQTTOutput", func() {
+	var output *wwmqtt.Output
 	var ctx spec.ComponentContext
 
 	BeforeEach(func() {
 		var err error
-		output, err = mqtt.NewOutput(env, mqtt.OutputConfig{
-			CommonMQTTConfig: mqtt.CommonMQTTConfig{
+		output, err = wwmqtt.NewOutput(env, wwmqtt.Config{
+			Mqtt: wwmqtt.MqttConfig{
 				Urls:     []string{url},
 				ClientId: "SINK",
+				Topic:    "test/output/${! json.topic }",
 			},
-			TopicExpr: "\"test\"",
 		})
 		Expect(err).ToNot(HaveOccurred())
 
@@ -34,14 +34,14 @@ var _ = Describe("Output", func() {
 
 	When("sending a message using the output", func() {
 		It("should put the message on the MQTT server", func() {
-			msg := spec.NewBytesMessage([]byte("hello, world"))
+			msg := spec.NewBytesMessage([]byte(`{"topic": "cat"}`))
 			b, err := msg.Raw()
 			Expect(err).ToNot(HaveOccurred())
 
-			recv := make(chan mqtt2.Message)
+			recv := make(chan mqtt3.Message)
 			ready := make(chan struct{})
-			tc := mqtt2.NewClient(mqtt2.NewClientOptions().AddBroker(url).SetOnConnectHandler(func(c mqtt2.Client) {
-				tok := c.Subscribe("test", 1, func(client mqtt2.Client, msg mqtt2.Message) {
+			tc := mqtt3.NewClient(mqtt3.NewClientOptions().AddBroker(url).SetOnConnectHandler(func(c mqtt3.Client) {
+				tok := c.Subscribe("test/output/cat", 1, func(client mqtt3.Client, msg mqtt3.Message) {
 					recv <- msg
 				})
 				tok.Wait()

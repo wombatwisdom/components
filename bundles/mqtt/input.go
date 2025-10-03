@@ -12,7 +12,7 @@ import (
 )
 
 type InputConfig struct {
-	CommonMQTTConfig
+	MqttConfig
 
 	// Filters is a map of topics and QoS levels to subscribe to
 	Filters map[string]byte
@@ -65,7 +65,7 @@ func (m *Input) Init(ctx spec.ComponentContext) error {
 	var msgMut sync.Mutex
 	msgChan := make(chan mqtt.Message)
 
-	opts := NewClientOptions(m.InputConfig.CommonMQTTConfig).
+	opts := NewClientOptions(m.InputConfig.MqttConfig).
 		SetCleanSession(m.CleanSession).
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
 			client.Disconnect(0)

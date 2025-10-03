@@ -7,24 +7,28 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-type CommonMQTTConfig struct {
+type MqttConfig struct {
 	ClientId string   `json:"client_id" yaml:"client_id"`
 	Urls     []string `json:"urls" yaml:"urls"`
+	Topic    string   `json:"Topic" yaml:"Topic"`
 
 	ConnectTimeout *time.Duration `json:"connect_timeout" yaml:"connect_timeout"`
 	KeepAlive      *time.Duration `json:"keepalive" yaml:"keepalive"`
 
-	Username string `json:"username" yaml:"username"`
-	Password string `json:"password" yaml:"password"`
-
-	TLS *tls.Config `json:"tls" yaml:"tls"`
+	Username         string        `json:"username" yaml:"username"`
+	Password         string        `json:"password" yaml:"password"`
+	WriteTimeout     time.Duration `json:"write_timeout" yaml:"write_timeout"`
+	Retained         bool          `json:"retained" yaml:"retained"`
+	QOS              byte          `json:"qos" yaml:"qos"`
+	FailBatchOnError bool          `json:"fail_batch_on_error" yaml:"fail_batch_on_error"`
+	TLS              *tls.Config   `json:"tls" yaml:"tls"`
 
 	Will *WillConfig `json:"will" yaml:"will"`
 }
 
-func (c *CommonMQTTConfig) apply(opts *mqtt.ClientOptions) *mqtt.ClientOptions {
+func (c *MqttConfig) apply(opts *mqtt.ClientOptions) *mqtt.ClientOptions {
 	opts = opts.SetAutoReconnect(false).
-		SetClientID(c.ClientId)
+		SetClientID(c.ClientId).SetWriteTimeout(c.WriteTimeout)
 
 	if c.ConnectTimeout != nil {
 		opts = opts.SetConnectTimeout(*c.ConnectTimeout)
@@ -57,7 +61,7 @@ func (c *CommonMQTTConfig) apply(opts *mqtt.ClientOptions) *mqtt.ClientOptions {
 	return opts
 }
 
-func NewClientOptions(config CommonMQTTConfig) *mqtt.ClientOptions {
+func NewClientOptions(config MqttConfig) *mqtt.ClientOptions {
 	return config.apply(mqtt.NewClientOptions())
 }
 

@@ -21,7 +21,7 @@ var _ = Describe("Roundtrip", func() {
 	BeforeEach(func() {
 		var err error
 		input, err = mqtt.NewInput(env, mqtt.InputConfig{
-			CommonMQTTConfig: mqtt.CommonMQTTConfig{
+			MqttConfig: mqtt.MqttConfig{
 				Urls:     []string{url},
 				ClientId: uuid.New().String(),
 			},
@@ -31,13 +31,13 @@ var _ = Describe("Roundtrip", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		output, err = mqtt.NewOutput(env, mqtt.OutputConfig{
-			CommonMQTTConfig: mqtt.CommonMQTTConfig{
+		output, err = mqtt.NewOutput(env, mqtt.Config{
+			Mqtt: mqtt.MqttConfig{
 				Urls:     []string{url},
 				ClientId: uuid.New().String(),
+				Topic:    "test",
+				QOS:      1,
 			},
-			QOS:       1,
-			TopicExpr: "\"test\"",
 		})
 		Expect(err).ToNot(HaveOccurred())
 

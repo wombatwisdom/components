@@ -53,6 +53,15 @@ func (m *mockComponentContext) BuildMetadataFilter(patterns []string, invert boo
 	return nil, nil // Mock implementation
 }
 
+func (m *mockComponentContext) ParseInterpolatedExpression(expr string) (spec.InterpolatedExpression, error) {
+	factory := spec.NewInterpolatedExpressionFactory(spec.NewExprLangExpressionFactory())
+	return factory.ParseInterpolatedExpression(expr)
+}
+
+func (m *mockComponentContext) CreateExpressionContext(msg spec.Message) spec.ExpressionContext {
+	return spec.MessageExpressionContext(msg)
+}
+
 func (m *mockComponentContext) NewBatch(msgs ...spec.Message) spec.Batch {
 	return &mockBatch{messages: msgs}
 }
