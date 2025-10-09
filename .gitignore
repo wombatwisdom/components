@@ -69,3 +69,5 @@ temp/
 
 # CI artifacts
 .github/workflows/*.log
+
+.idea

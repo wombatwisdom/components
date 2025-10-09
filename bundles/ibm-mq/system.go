@@ -82,8 +82,8 @@ func (s *System) Connect(ctx context.Context) error {
 	cno.Options = ibmmq.MQCNO_CLIENT_BINDING + ibmmq.MQCNO_RECONNECT + ibmmq.MQCNO_HANDLE_SHARE_BLOCK
 
 	// Set application name if configured
-	if s.cfg.ApplicationName != nil {
-		cno.ApplName = *s.cfg.ApplicationName
+	if s.cfg.ApplicationName != "" { // TODO -> empty string?
+		cno.ApplName = s.cfg.ApplicationName
 	} else {
 		cno.ApplName = "WombatWisdom MQ Component"
 	}
@@ -101,11 +101,11 @@ func (s *System) Connect(ctx context.Context) error {
 
 	// Connect to the queue manager
 	var err error
-	s.qmgr, err = ibmmq.Connx(s.cfg.QueueManagerName, cno)
+	qmgr, err := ibmmq.Connx(s.cfg.QueueManagerName, cno)
 	if err != nil {
 		return fmt.Errorf("failed to connect to queue manager %s: %w", s.cfg.QueueManagerName, err)
 	}
-
+	s.qmgr = &qmgr
 	return nil
 }
 

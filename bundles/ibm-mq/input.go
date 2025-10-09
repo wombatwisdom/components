@@ -3,6 +3,7 @@
 package ibm_mq
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -66,7 +67,7 @@ type asyncMessage struct {
 }
 
 func (i *Input) Init(ctx spec.ComponentContext) error {
-	client, ok := i.sys.Client().(*ibmmq.MQQueueManager)
+	_, ok := i.sys.Client().(*ibmmq.MQQueueManager)
 	if !ok {
 		return fmt.Errorf("mq client is not of type *ibmmq.MQQueueManager")
 	}
@@ -78,12 +79,12 @@ func (i *Input) Init(ctx spec.ComponentContext) error {
 	// Create queue connections based on num_threads
 	i.queueConnections = make([]*queueConnection, i.cfg.NumThreads)
 
-	for i := range i.queueConnections {
+	for j := range i.queueConnections {
 		// Create a new queue manager connection for each thread
 		// This provides better parallelism and avoids contention
 		qmgr, ok := i.sys.Client().(*ibmmq.MQQueueManager)
 		if !ok {
-			return fmt.Errorf("failed to get queue manager for thread %d", i)
+			return fmt.Errorf("failed to get queue manager for thread %d", j)
 		}
 
 		// Open the queue for input
@@ -97,14 +98,14 @@ func (i *Input) Init(ctx spec.ComponentContext) error {
 			return fmt.Errorf("failed to open queue %s: %w", i.cfg.QueueName, err)
 		}
 
-		i.queueConnections[i] = &queueConnection{
+		i.queueConnections[j] = &queueConnection{
 			qmgr:    qmgr,
 			qObject: qObject,
 		}
 
 		// Start a goroutine for this connection to read messages
 		i.wg.Add(1)
-		go i.processMessages(ctx, i.queueConnections[i])
+		go i.processMessages(ctx, i.queueConnections[j])
 	}
 
 	return nil
@@ -136,9 +137,9 @@ func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 	case msg := <-i.msgChan:
 		return msg.batch, msg.ackFn, nil
 	case <-i.shutdownChan:
-		return nil, nil, spec.ErrEndOfInput
-	case <-ctx.Done():
-		return nil, nil, ctx.Err()
+		return nil, nil, spec.ErrNoData // TODO: check if this is the correct error mapping
+	case <-ctx.Context().Done():
+		return nil, nil, ctx.Context().Err()
 	}
 }
 
@@ -173,7 +174,8 @@ func (i *Input) readBatch(ctx spec.ComponentContext, conn *queueConnection, wait
 	defer conn.mutex.Unlock()
 
 	batch := ctx.NewBatch()
-	var messages []*ibmmq.MQMessage
+	// TODO: should be an array of byte arrays (messages)
+	var messages [][]byte
 
 	// Read up to batch_count messages
 	for j := 0; j < i.cfg.BatchCount; j++ {
@@ -208,13 +210,7 @@ func (i *Input) readBatch(ctx spec.ComponentContext, conn *queueConnection, wait
 			return fmt.Errorf("failed to get message from queue: %w", err)
 		}
 
-		// Store the message for processing
-		msg := &ibmmq.MQMessage{
-			Data: buffer[:datalen],
-			MQMD: mqmd,
-		}
-		messages = append(messages, msg)
-
+		// TODO: Check if we're actually reading the message correctly here.
 		// Convert to WombatWisdom message and add to batch
 		wmsg := ctx.NewMessage()
 		wmsg.SetRaw(buffer[:datalen])
@@ -231,9 +227,11 @@ func (i *Input) readBatch(ctx spec.ComponentContext, conn *queueConnection, wait
 	}
 
 	// Only send batch if we have messages
-	if batch.Len() > 0 {
+	// TODO: not sure if this is correct
+	if len(messages) > 0 {
 		// Create acknowledgment function
-		ackFn := func(ackErr error) error {
+		// TODO: not sure if ack function is correct
+		ackFn := func(ctx context.Context, ackErr error) error {
 			conn.mutex.Lock()
 			defer conn.mutex.Unlock()
 

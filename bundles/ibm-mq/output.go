@@ -4,7 +4,6 @@ package ibm_mq
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -17,21 +16,21 @@ const (
 )
 
 // NewOutput creates a new MQ output component
-func NewOutput(sys spec.System, cfg OutputConfig) *Output {
+func NewOutput(env spec.Environment, cfg OutputConfig) *Output {
 	return &Output{
-		sys: sys,
+		env: env,
 		cfg: cfg,
 	}
 }
 
-// NewOutputFromConfig creates an output from a spec.Config interface
-func NewOutputFromConfig(sys spec.System, config spec.Config) (*Output, error) {
-	var cfg OutputConfig
-	if err := config.Decode(&cfg); err != nil {
-		return nil, err
-	}
-	return NewOutput(sys, cfg), nil
-}
+//// NewOutputFromConfig creates an output from a spec.Config interface
+//func NewOutputFromConfig(sys spec.System, config spec.Config) (*Output, error) {
+//	var cfg OutputConfig
+//	if err := config.Decode(&cfg); err != nil {
+//		return nil, err
+//	}
+//	return NewOutput(sys, cfg), nil
+//}
 
 // Output sends messages to an IBM MQ queue.
 //
@@ -43,16 +42,17 @@ func NewOutputFromConfig(sys spec.System, config spec.Config) (*Output, error) {
 // Messages are written transactionally to ensure reliable delivery.
 // The output can be configured to include metadata as MQ message properties.
 type Output struct {
-	sys spec.System
+	env spec.Environment
 	cfg OutputConfig
 
-	queueName      spec.Expression
+	queueExpr      spec.Expression
 	metadataFilter spec.MetadataFilter
 
 	queueConnections []*outputQueueConnection
 	connChan         chan *outputQueueConnection
 	shutdownOnce     sync.Once
 	shutdownChan     chan struct{}
+	client           *ibmmq.MQQueueManager
 }
 
 type outputQueueConnection struct {
@@ -62,16 +62,18 @@ type outputQueueConnection struct {
 }
 
 func (o *Output) Init(ctx spec.ComponentContext) error {
-	client, ok := o.sys.Client().(*ibmmq.MQQueueManager)
-	if !ok {
-		return fmt.Errorf("mq client is not of type *ibmmq.MQQueueManager")
-	}
+	// TODO: we probably should use this client at some point : )
+	//_, ok := o.client.(*ibmmq.MQQueueManager)
+	//if !ok {
+	//	return fmt.Errorf("mq client is not of type *ibmmq.MQQueueManager")
+	//}
 
 	// Parse queue name as expression (it might contain variables)
 	var err error
-	if o.queueName, err = ctx.ParseExpression(o.cfg.QueueName); err != nil {
-		return fmt.Errorf("queue_name: %w", err)
-	}
+	// TODO: We should evaluate this ate write-time with a message context
+	//if o.queueExpr, err = o.cfg.QueueExpr.Eval(?); err != nil {
+	//	return fmt.Errorf("queue_name: %w", err)
+	//}
 
 	// Setup metadata filter if configured
 	if o.cfg.Metadata != nil {
@@ -89,24 +91,20 @@ func (o *Output) Init(ctx spec.ComponentContext) error {
 
 	for i := range o.queueConnections {
 		// Each thread gets its own queue manager connection and queue object
-		qmgr, ok := o.sys.Client().(*ibmmq.MQQueueManager)
-		if !ok {
-			return fmt.Errorf("failed to get queue manager for thread %d", i)
-		}
-
+		// TODO fix client
 		// Open the queue for output
 		mqod := ibmmq.NewMQOD()
 		mqod.ObjectType = ibmmq.MQOT_Q
 		mqod.ObjectName = o.cfg.QueueName
 
 		openOptions := ibmmq.MQOO_OUTPUT + ibmmq.MQOO_FAIL_IF_QUIESCING
-		qObject, err := qmgr.Open(mqod, openOptions)
+		qObject, err := o.client.Open(mqod, openOptions)
 		if err != nil {
 			return fmt.Errorf("failed to open queue %s: %w", o.cfg.QueueName, err)
 		}
 
 		conn := &outputQueueConnection{
-			qmgr:    qmgr,
+			qmgr:    o.client,
 			qObject: qObject,
 		}
 
@@ -167,8 +165,10 @@ func (o *Output) WriteMessage(ctx spec.ComponentContext, message spec.Message) e
 	conn.mutex.Lock()
 	defer conn.mutex.Unlock()
 
+	exprCtx := spec.MessageExpressionContext(message)
+
 	// Evaluate queue name (might be dynamic)
-	queueName, err := o.queueName.EvalString(spec.MessageExpressionContext(message))
+	queueName, err := o.cfg.QueueExpr.Eval(exprCtx)
 	if err != nil {
 		return fmt.Errorf("queue_name: %w", err)
 	}
@@ -211,54 +211,60 @@ func (o *Output) createMQMD(message spec.Message) *ibmmq.MQMD {
 	mqmd := ibmmq.NewMQMD()
 
 	// Set format
-	if o.cfg.Format != nil {
-		mqmd.Format = *o.cfg.Format
-	} else {
-		mqmd.Format = "MQSTR"
-	}
+	// TODO: fix / implement this
+	//if o.cfg.Format != nil {
+	//	mqmd.Format = *o.cfg.Format
+	//} else {
+	//	mqmd.Format = "MQSTR"
+	//}
 
 	// Set CCSID
-	if o.cfg.Ccsid != nil {
-		if ccsidInt, err := strconv.Atoi(*o.cfg.Ccsid); err == nil {
-			mqmd.CodedCharSetId = int32(ccsidInt)
-		} else {
-			mqmd.CodedCharSetId = 1208 // UTF-8 default
-		}
-	} else {
-		mqmd.CodedCharSetId = 1208 // UTF-8 default
-	}
+	// TODO: fix / implement this
+	//if o.cfg.Ccsid != nil {
+	//	if ccsidInt, err := strconv.Atoi(*o.cfg.Ccsid); err == nil {
+	//		mqmd.CodedCharSetId = int32(ccsidInt)
+	//	} else {
+	//		mqmd.CodedCharSetId = 1208 // UTF-8 default
+	//	}
+	//} else {
+	//	mqmd.CodedCharSetId = 1208 // UTF-8 default
+	//}
 
 	// Set encoding
-	if o.cfg.Encoding != nil {
-		if encodingInt, err := strconv.Atoi(*o.cfg.Encoding); err == nil {
-			mqmd.Encoding = int32(encodingInt)
-		} else {
-			mqmd.Encoding = 546 // default encoding
-		}
-	} else {
-		mqmd.Encoding = 546 // default encoding
-	}
+	// TODO: fix / implement this
+	//if o.cfg.Encoding != nil {
+	//	if encodingInt, err := strconv.Atoi(*o.cfg.Encoding); err == nil {
+	//		mqmd.Encoding = int32(encodingInt)
+	//	} else {
+	//		mqmd.Encoding = 546 // default encoding
+	//	}
+	//} else {
+	//	mqmd.Encoding = 546 // default encoding
+	//}
 
 	// Try to set priority from metadata
-	if priority, exists := message.Metadata()["mq_priority"]; exists {
-		if priorityInt, err := strconv.Atoi(fmt.Sprintf("%v", priority)); err == nil {
-			mqmd.Priority = int32(priorityInt)
-		}
-	}
+	// TODO: fix / implement this
+	//if priority, exists := message.Metadata()["mq_priority"]; exists {
+	//	if priorityInt, err := strconv.Atoi(fmt.Sprintf("%v", priority)); err == nil {
+	//		mqmd.Priority = int32(priorityInt)
+	//	}
+	//}
 
 	// Try to set persistence from metadata
-	if persistence, exists := message.Metadata()["mq_persistence"]; exists {
-		if persistenceInt, err := strconv.Atoi(fmt.Sprintf("%v", persistence)); err == nil {
-			mqmd.Persistence = int32(persistenceInt)
-		}
-	}
+	// TODO: fix / implement this
+	//if persistence, exists := message.Metadata()["mq_persistence"]; exists {
+	//	if persistenceInt, err := strconv.Atoi(fmt.Sprintf("%v", persistence)); err == nil {
+	//		mqmd.Persistence = int32(persistenceInt)
+	//	}
+	//}
 
 	// Try to set correlation ID from metadata
-	if correlId, exists := message.Metadata()["mq_correlation_id"]; exists {
-		if correlIdStr := fmt.Sprintf("%v", correlId); len(correlIdStr) <= 24 {
-			copy(mqmd.CorrelId[:], []byte(correlIdStr))
-		}
-	}
+	// TODO: fix / implement this
+	//if correlId, exists := message.Metadata()["mq_correlation_id"]; exists {
+	//	if correlIdStr := fmt.Sprintf("%v", correlId); len(correlIdStr) <= 24 {
+	//		copy(mqmd.CorrelId[:], []byte(correlIdStr))
+	//	}
+	//}
 
 	return mqmd
 }

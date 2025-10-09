@@ -65,12 +65,12 @@ func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 
 // Output stub implementation
 type Output struct {
-	sys spec.System
+	env spec.Environment
 	cfg OutputConfig
 }
 
-func NewOutput(sys spec.System, cfg OutputConfig) *Output {
-	return &Output{sys: sys, cfg: cfg}
+func NewOutput(env spec.Environment, cfg OutputConfig) *Output {
+	return &Output{env: env, cfg: cfg}
 }
 
 func NewOutputFromConfig(sys spec.System, config spec.Config) (*Output, error) {

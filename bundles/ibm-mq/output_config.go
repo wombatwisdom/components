@@ -5,9 +5,12 @@ package ibm_mq
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/wombatwisdom/components/framework/spec"
 )
 
 type OutputConfig struct {
+	QueueExpr        spec.Expression `json:"topic_expr" yaml:"topic_expr"`
+
 	// The Coded Character Set Identifier for the message. Determines the character
 	// encoding of the message data.
 	//
