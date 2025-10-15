@@ -19,19 +19,17 @@ var _ = Describe("Output", func() {
 		var err error
 		ctx = test.NewMockComponentContext()
 
-		// Create a simple expression that returns the queue name
 		queueExpr, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
 		Expect(err).ToNot(HaveOccurred())
 
 		cfg := ibm_mq.OutputConfig{
 			CommonMQConfig: ibm_mq.CommonMQConfig{
 				QueueManagerName: "QM1",
-				// Leave ConnectionName empty to use MQSERVER env var
-				ConnectionName: "",
-				UserId:         "app",
-				Password:       "passw0rd",
+				ConnectionName:   "",         // fallback to MQSERVER env var
+				UserId:           "app",      // testcontainer default
+				Password:         "passw0rd", // testcontainer default
 			},
-			QueueName: "DEV.QUEUE.1", // Using default developer queue
+			QueueName: "DEV.QUEUE.1", // testcontainer default developer queue
 			QueueExpr: queueExpr,
 		}
 
@@ -47,7 +45,6 @@ var _ = Describe("Output", func() {
 
 	When("sending a message using the output", func() {
 		It("should put the message on the queue", func() {
-			// TODO: some repetition here
 			msg := spec.NewBytesMessage([]byte("hello, world"))
 			b, err := msg.Raw()
 			Expect(err).ToNot(HaveOccurred())
@@ -55,40 +52,37 @@ var _ = Describe("Output", func() {
 			recv := make(chan []byte)
 			ready := make(chan struct{})
 
-			// Connect to queue manager with authentication
 			cno := ibmmq.NewMQCNO()
 			csp := ibmmq.NewMQCSP()
 			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
-			csp.UserId = "app"
-			csp.Password = "passw0rd" // Matches MQ_APP_PASSWORD in container setup
+			csp.UserId = "app"        // testcontainer default
+			csp.Password = "passw0rd" // testcontainer default
 			cno.SecurityParms = csp
 
 			qMgr, err := ibmmq.Connx("QM1", cno)
 			Expect(err).ToNot(HaveOccurred())
 
-			// TODO: When do we disconnect?
 			defer qMgr.Disc()
 
 			// Open the queue for reading
-			mqod := ibmmq.NewMQOD() // object descriptor?
+			mqod := ibmmq.NewMQOD()
 			mqod.ObjectType = ibmmq.MQOT_Q
-			mqod.ObjectName = "DEV.QUEUE.1" // Using default developer queue
+			mqod.ObjectName = "DEV.QUEUE.1" // testcontainer default developer queue
 			openOptions := ibmmq.MQOO_INPUT_EXCLUSIVE
 
 			qObj, err := qMgr.Open(mqod, openOptions)
 			Expect(err).ToNot(HaveOccurred())
-			defer qObj.Close(ibmmq.MQCO_NONE) // TODO: when?
+			defer qObj.Close(ibmmq.MQCO_NONE)
 
-			// Signal that the queue reader is ready
 			close(ready)
 
-			// Start message reader goroutine
+			// poll read
 			go func() {
 				defer close(recv)
-				getmqmd := ibmmq.NewMQMD() // message descriptor?
+				getmqmd := ibmmq.NewMQMD()
 				gmo := ibmmq.NewMQGMO()
 				gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT | ibmmq.MQGMO_WAIT
-				gmo.WaitInterval = 3000 // 3 seconds
+				gmo.WaitInterval = 3000
 
 				buffer := make([]byte, 1024)
 				datalen, err := qObj.Get(getmqmd, gmo, buffer)
@@ -97,7 +91,6 @@ var _ = Describe("Output", func() {
 				}
 			}()
 
-			// Wait for ready, then send message and wait for receipt
 			<-ready
 			Expect(output.Write(ctx, ctx.NewBatch(msg))).To(Succeed())
 

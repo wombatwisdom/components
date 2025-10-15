@@ -21,9 +21,9 @@ var _ = Describe("Roundtrip", func() {
 		output = ibm_mq.NewOutput(env, ibm_mq.OutputConfig{
 			CommonMQConfig: ibm_mq.CommonMQConfig{
 				QueueManagerName: "QM1",
-				ConnectionName:   "", // Use MQSERVER env var
-				UserId:           "app",
-				Password:         "passw0rd",
+				ConnectionName:   "",         // fallback to MQSERVER env var
+				UserId:           "app",      // testcontainer default
+				Password:         "passw0rd", // testcontainer default
 			},
 			QueueName: "DEV.QUEUE.1",
 		})
@@ -35,9 +35,9 @@ var _ = Describe("Roundtrip", func() {
 		input = ibm_mq.NewInput(env, ibm_mq.InputConfig{
 			CommonMQConfig: ibm_mq.CommonMQConfig{
 				QueueManagerName: "QM1",
-				ConnectionName:   "", // Use MQSERVER env var
-				UserId:           "app",
-				Password:         "passw0rd",
+				ConnectionName:   "",         // fallback to MQSERVER env var
+				UserId:           "app",      // testcontainer default
+				Password:         "passw0rd", // testcontainer default
 			},
 			QueueName: "DEV.QUEUE.1",
 		})

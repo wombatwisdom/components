@@ -19,12 +19,11 @@ var _ = Describe("Input", func() {
 		input = ibm_mq.NewInput(test.TestEnvironment(), ibm_mq.InputConfig{
 			CommonMQConfig: ibm_mq.CommonMQConfig{
 				QueueManagerName: "QM1",
-				// Leave ConnectionName empty to fall back to MQSERVER env var
-				ConnectionName: "",
-				UserId:         "app",
-				Password:       "passw0rd",
+				ConnectionName:   "",         // fallback to MQSERVER env var
+				UserId:           "app",      // testcontainer default
+				Password:         "passw0rd", // testcontainer default
 			},
-			QueueName: "DEV.QUEUE.1",
+			QueueName: "DEV.QUEUE.1", // testcontainer default developer queue
 		})
 
 		err := input.Init(ctx)
