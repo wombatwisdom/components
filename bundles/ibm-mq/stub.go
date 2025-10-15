@@ -9,6 +9,58 @@ import (
 	"github.com/wombatwisdom/components/framework/spec"
 )
 
+// CommonMQConfig stub for non-mqclient builds
+type CommonMQConfig struct {
+	QueueManagerName string
+	ChannelName      string
+	ConnectionName   string
+	UserId           string
+	Password         string
+	ApplicationName  string
+}
+
+// OutputConfig stub for non-mqclient builds
+type OutputConfig struct {
+	CommonMQConfig
+	QueueName  string
+	QueueExpr  spec.Expression
+	NumThreads int
+	Metadata   *MetadataConfig
+}
+
+// MetadataConfig stub for non-mqclient builds
+type MetadataConfig struct {
+	Patterns []string
+	Invert   bool
+}
+
+// InputConfig stub for non-mqclient builds
+type InputConfig struct {
+	CommonMQConfig
+	QueueName    string
+	NumWorkers   int
+	BatchSize    int
+	PollInterval string
+	NumThreads   int
+	WaitTime     string
+	BatchCount   int
+}
+
+// SystemConfig stub for non-mqclient builds
+type SystemConfig struct {
+	CommonMQConfig
+	TLS *TLSConfig
+}
+
+// TLSConfig stub for non-mqclient builds
+type TLSConfig struct {
+	Enabled               bool
+	CipherSpec            string
+	KeyRepository         *string
+	KeyRepositoryPassword *string
+	CertificateLabel      *string
+}
+
 // Stub implementations when IBM MQ client libraries are not available
 // This allows the component to compile for development and testing
 
@@ -39,16 +91,12 @@ func (s *System) Close(ctx context.Context) error {
 
 // Input stub implementation
 type Input struct {
-	_ spec.System
-	_ InputConfig
+	env spec.Environment
+	cfg InputConfig
 }
 
-func NewInput(sys spec.System, rawConfig spec.Config) (*Input, error) {
-	return nil, fmt.Errorf("IBM MQ client libraries not available - build with -tags mqclient")
-}
-
-func NewInputFromConfig(sys spec.System, config spec.Config) (*Input, error) {
-	return nil, fmt.Errorf("IBM MQ client libraries not available - build with -tags mqclient")
+func NewInput(env spec.Environment, config InputConfig) *Input {
+	return &Input{env: env, cfg: config}
 }
 
 func (i *Input) Init(ctx spec.ComponentContext) error {

@@ -4,11 +4,6 @@ silent: true
 
 vars:
   COMPONENT_NAME: "ibm_mq"
-  # Schema mappings - more maintainable format
-  SCHEMA_MAPPINGS_LIST:
-    - "dev.wombat.component.ibm_mq.system.config=./system_config.go"
-    - "dev.wombat.component.ibm_mq.input.config=./input_config.go"
-    - "dev.wombat.component.ibm_mq.output.config=./output_config.go"
   SHOW_PROGRESS: "true"
 
 includes:
@@ -16,21 +11,9 @@ includes:
     taskfile: ../_common/Taskfile.yml
 
 tasks:
-  generate:
-    desc: Generate code from schemas
-    cmds:
-      - |
-        if [ {{len .SCHEMA_MAPPINGS_LIST}} -gt 0 ] && [ -n "{{.COMPONENT_NAME}}" ]; then
-          go-jsonschema --struct-name-from-title \
-            --package {{.COMPONENT_NAME}} \
-            {{range .SCHEMA_MAPPINGS_LIST}}--schema-output={{.}} {{end}}\
-            *.schema.yaml > /dev/null
-        fi
-
   validate:
     desc: Validate the component
     cmds:
-      - task: generate
       - task: common:validate
         vars:
           COMPONENT_NAME: "{{.COMPONENT_NAME}}"
@@ -63,7 +46,6 @@ tasks:
   build:
     desc: Build the component
     cmds:
-      - task: generate
       - task: common:build
         vars:
           COMPONENT_NAME: "{{.COMPONENT_NAME}}"

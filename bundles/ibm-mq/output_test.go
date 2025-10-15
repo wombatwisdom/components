@@ -19,18 +19,26 @@ var _ = Describe("Output", func() {
 		var err error
 		ctx = test.NewMockComponentContext()
 
-		queue, err := spec.NewExprLangExpression("${!\"test\"}")
+		// Create a simple expression that returns the queue name
+		queueExpr, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
 		Expect(err).ToNot(HaveOccurred())
 
 		cfg := ibm_mq.OutputConfig{
+			CommonMQConfig: ibm_mq.CommonMQConfig{
+				QueueManagerName: "QM1",
+				// Leave ConnectionName empty to use MQSERVER env var
+				ConnectionName: "",
+				UserId:         "app",
+				Password:       "passw0rd",
+			},
 			QueueName: "DEV.QUEUE.1", // Using default developer queue
-			QueueExpr: queue,
+			QueueExpr: queueExpr,
 		}
 
-		// TODO: check for err
 		output = ibm_mq.NewOutput(env, cfg)
 
-		_ = output.Init(ctx)
+		err = output.Init(ctx)
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -38,7 +46,7 @@ var _ = Describe("Output", func() {
 	})
 
 	When("sending a message using the output", func() {
-		It("should put the message on the IBM MQ queue", func() {
+		It("should put the message on the queue", func() {
 			// TODO: some repetition here
 			msg := spec.NewBytesMessage([]byte("hello, world"))
 			b, err := msg.Raw()
@@ -57,6 +65,7 @@ var _ = Describe("Output", func() {
 
 			qMgr, err := ibmmq.Connx("QM1", cno)
 			Expect(err).ToNot(HaveOccurred())
+
 			// TODO: When do we disconnect?
 			defer qMgr.Disc()
 
@@ -70,7 +79,10 @@ var _ = Describe("Output", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer qObj.Close(ibmmq.MQCO_NONE) // TODO: when?
 
-			// polling
+			// Signal that the queue reader is ready
+			close(ready)
+
+			// Start message reader goroutine
 			go func() {
 				defer close(recv)
 				getmqmd := ibmmq.NewMQMD() // message descriptor?
@@ -83,16 +95,15 @@ var _ = Describe("Output", func() {
 				if err == nil {
 					recv <- buffer[:datalen]
 				}
-				close(ready)
 			}()
 
-			select {
-			case <-ready:
-				Expect(output.Write(ctx, ctx.NewBatch(msg))).To(Succeed())
-				Eventually(recv).Should(Receive())
-			case msg := <-recv:
-				Expect(msg).To(Equal(b))
-			}
+			// Wait for ready, then send message and wait for receipt
+			<-ready
+			Expect(output.Write(ctx, ctx.NewBatch(msg))).To(Succeed())
+
+			var received []byte
+			Eventually(recv).Should(Receive(&received))
+			Expect(received).To(Equal(b))
 		})
 	})
 })
