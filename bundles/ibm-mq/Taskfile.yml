@@ -46,11 +46,11 @@ tasks:
     dir: ../..
     cmds:
       - |
-        docker build --load -f bundles/ibm-mq/Dockerfile -t components-mq-test . && \
+        docker build -f bundles/ibm-mq/Dockerfile -t components-mq-test . && \
         docker run --rm \
           --privileged \
+          -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal \
           -v /var/run/docker.sock:/var/run/docker.sock \
-          -e DOCKER_HOST=unix:///var/run/docker.sock \
           components-mq-test
 
   test:unit:
