@@ -24,13 +24,6 @@ tasks:
     desc: Run component tests
     cmds:
       - |
-        if [ -z "${MQ_INSTALLATION_PATH}" ]; then
-          echo "MQ_INSTALLATION_PATH is not set. See readme on how to configure IBM redistributable"
-          exit 1
-        else
-          echo "MQ_INSTALLATION_PATH is set to: ${MQ_INSTALLATION_PATH}"
-        fi
-        
         if [ -z "${CGO_LDFLAGS}" ]; then
           echo "CGO_LDFLAGS is not set. See readme on how to configure IBM redistributable"
           exit 1

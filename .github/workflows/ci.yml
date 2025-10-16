@@ -85,7 +85,6 @@ jobs:
       env:
         NATS_URL: nats://localhost:4222
         MQTT_URL: tcp://localhost:1883
-        MQ_HOME: "${{ github.workspace }}/../mqclient"
         CGO_CFLAGS: "-I${{ github.workspace }}/../mqclient/inc"
         CGO_LDFLAGS: "-L${{ github.workspace }}/../mqclient/lib64 -Wl,-rpath=${{ github.workspace }}/../mqclient/lib64"
     - name: Run tests with race detector
