@@ -184,6 +184,7 @@ go build -tags mqclient ./...
 
 ### Run IBM MQ tests 
 
+#### Option 1: On dev machine
 ```bash
 # Ensure MQ libraries are set up (see above)
 export CGO_ENABLED=1
@@ -193,15 +194,14 @@ export CGO_LDFLAGS="-L${MQ_HOME}/lib64 -Wl,-rpath=${MQ_HOME}/lib64"
 # Run tests with mqclient tag
 task test:all
 ```
+#### Option 2: Using docker
 
-# Set MQSERVER for tests
-export MQSERVER='DEV.APP.SVRCONN/TCP/localhost(1414)'
+This will run the IBM MQ tests in a Docker container. This does not require you to instill the IBM MQ redistributable. 
 
-# Run tests
-go test -tags mqclient ./...
+Note that this will need a functional docker-in-docker set-up. 
 
-# Clean up
-docker stop mq-test
+```bash
+task bundles:ibm-mq:test_container
 ```
 
 ## 📖 Usage Examples
