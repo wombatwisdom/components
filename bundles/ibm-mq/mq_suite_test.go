@@ -33,7 +33,7 @@ func TestMQ(t *testing.T) {
 				"LICENSE":         "accept",
 				"MQ_QMGR_NAME":    "QM1",
 				"MQ_DEV":          "true",     // Enable developer defaults
-				"MQ_APP_PASSWORD": "passw0rd", // Set a password for the app user
+				"MQ_APP_PASSWORD": "passw0rd", // #nosec G101 - testcontainer default credential
 			},
 			WaitingFor: wait.ForLog("Started web server").WithStartupTimeout(2 * time.Minute),
 		}

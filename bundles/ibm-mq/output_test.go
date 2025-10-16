@@ -29,7 +29,7 @@ var _ = Describe("Output", func() {
 				QueueManagerName: "QM1",
 				ConnectionName:   "",         // fallback to MQSERVER env var
 				UserId:           "app",      // testcontainer default
-				Password:         "passw0rd", // testcontainer default
+				Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 			},
 			QueueName: "DEV.QUEUE.1", // testcontainer default developer queue
 			QueueExpr: queueExpr,
@@ -58,7 +58,7 @@ var _ = Describe("Output", func() {
 			csp := ibmmq.NewMQCSP()
 			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
 			csp.UserId = "app"        // testcontainer default
-			csp.Password = "passw0rd" // testcontainer default
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
 			cno.SecurityParms = csp
 
 			qMgr, err := ibmmq.Connx("QM1", cno)
