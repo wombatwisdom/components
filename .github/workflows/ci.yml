@@ -57,14 +57,14 @@ jobs:
       id: cache-mq
       uses: actions/cache@v4
       with:
-        path: ~/mqclient
+        path: ${{ runner.temp }}/mqclient
         key: ${{ runner.os }}-ibm-mq-9.4.1.0
 
     - name: Download and setup IBM MQ Client
       if: steps.cache-mq.outputs.cache-hit != 'true'
       run: |
-        mkdir -p ~/mqclient
-        cd ~/mqclient
+        mkdir -p ${{ runner.temp }}/mqclient
+        cd ${{ runner.temp }}/mqclient
         wget https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist/9.4.1.0-IBM-MQC-Redist-LinuxX64.tar.gz
         tar -xzf 9.4.1.0-IBM-MQC-Redist-LinuxX64.tar.gz
         rm 9.4.1.0-IBM-MQC-Redist-LinuxX64.tar.gz
@@ -85,8 +85,8 @@ jobs:
       env:
         NATS_URL: nats://localhost:4222
         MQTT_URL: tcp://localhost:1883
-        CGO_CFLAGS: "-I${{ github.workspace }}/../mqclient/inc"
-        CGO_LDFLAGS: "-L${{ github.workspace }}/../mqclient/lib64 -Wl,-rpath=${{ github.workspace }}/../mqclient/lib64"
+        CGO_CFLAGS: "-I${{ runner.temp }}/mqclient/inc"
+        CGO_LDFLAGS: "-L${{ runner.temp }}/mqclient/lib64 -Wl,-rpath=${{ runner.temp }}/mqclient/lib64"
     - name: Run tests with race detector
       run: task test:race
 
