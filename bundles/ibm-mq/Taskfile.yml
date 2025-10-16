@@ -17,11 +17,48 @@ tasks:
       - task: common:validate
         vars:
           COMPONENT_NAME: "{{.COMPONENT_NAME}}"
-  
+
+  # This requires CGO_LDFLAGS, CGO_CFLAGS and MQ_INSTALLATION_PATH to be configured
+  # See readme
   test:
     desc: Run component tests
     cmds:
-      - task: common:test
+      - |
+        if [ -z "${MQ_INSTALLATION_PATH}" ]; then
+          echo "MQ_INSTALLATION_PATH is not set. See readme on how to configure IBM redistributable"
+          exit 1
+        else
+          echo "MQ_INSTALLATION_PATH is set to: ${MQ_INSTALLATION_PATH}"
+        fi
+        
+        if [ -z "${CGO_LDFLAGS}" ]; then
+          echo "CGO_LDFLAGS is not set. See readme on how to configure IBM redistributable"
+          exit 1
+        else
+          echo "CGO_LDFLAGS is set to: ${CGO_LDFLAGS}"
+        fi
+        
+        if [ -z "${CGO_CFLAGS}" ]; then
+          echo "CGO_CFLAGS is not set. See readme on how to configure IBM redistributable"
+          exit 1
+        else
+          echo "CGO_CFLAGS is set to: ${CGO_CFLAGS}"
+        fi
+        go test -tags mqclient ./ -v
+
+  # This should run without extra config
+  # TODO: try this on OSX
+  test_container:
+    desc: Run IBM MQ tests in container with MQ libraries
+    dir: ../..
+    cmds:
+      - |
+        docker build --load -f bundles/ibm-mq/Dockerfile -t components-mq-test . && \
+        docker run --rm \
+          --privileged \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -e DOCKER_HOST=unix:///var/run/docker.sock \
+          components-mq-test
 
   test:unit:
     desc: Run unit tests only

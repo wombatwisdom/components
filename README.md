@@ -127,6 +127,83 @@ task generate:component <name>  # Generate new component
 task nats:schema:generate      # Generate NATS schemas
 ```
 
+### Setting up IBM MQ Client Libraries
+
+To build and test with actual IBM MQ support (using the `mqclient` tag), you need the IBM MQ client libraries.
+
+#### Option 1: Download IBM MQ Redistributable Client
+
+1. Download the IBM MQ redistributable client from IBM Fix Central:
+    - Visit [IBM Fix Central](https://www.ibm.com/support/fixcentral/)
+    - Search for "IBM MQ redistributable client"
+    - Download the appropriate version (e.g., `9.3.0.0-IBM-MQC-Redist-LinuxX64.tar.gz`)
+    - Or use a direct link (linux): [9.4.1.0-IBM-MQC-Redist-LinuxX64.tar.gz](https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist/9.4.1.0-IBM-MQC-Redist-LinuxX64.tar.gz)
+
+More info can be found at [developer.ibm.com](https://developer.ibm.com/components/ibm-mq/)
+
+2. Extract to a local directory:
+```bash
+mkdir -p ~/mqclient
+tar -xzf 9.3.0.0-IBM-MQC-Redist-LinuxX64.tar.gz -C ~/mqclient/
+```
+
+3. Set environment variables:
+```bash
+export MQ_HOME="$HOME/mqclient"
+export CGO_CFLAGS="-I${MQ_HOME}/inc"
+export CGO_LDFLAGS="-L${MQ_HOME}/lib64 -Wl,-rpath=${MQ_HOME}/lib64"
+```
+
+#### Option 2: Use Docker Container for Testing
+
+Run tests in a container with IBM MQ pre-installed: 
+```bash
+task bundles:ibm-mq:test_container
+```
+
+Note that this requires elevated permissions to support docker-in-docker.
+
+### Building with IBM MQ support
+
+**Without IBM MQ client (stub implementation):**
+```bash
+go build ./...
+```
+This is the default build mode and doesn't require any IBM MQ libraries.
+
+**With IBM MQ client support:**
+```bash
+# Ensure environment variables are set (see setup instructions above)
+export CGO_ENABLED=1
+export CGO_CFLAGS="-I${MQ_HOME}/inc"
+export CGO_LDFLAGS="-L${MQ_HOME}/lib64 -Wl,-rpath=${MQ_HOME}/lib64"
+
+# Build with mqclient tag
+go build -tags mqclient ./...
+```
+
+### Run IBM MQ tests 
+
+```bash
+# Ensure MQ libraries are set up (see above)
+export CGO_ENABLED=1
+export CGO_CFLAGS="-I${MQ_HOME}/inc"
+export CGO_LDFLAGS="-L${MQ_HOME}/lib64 -Wl,-rpath=${MQ_HOME}/lib64"
+
+# Run tests with mqclient tag
+task test:all
+```
+
+# Set MQSERVER for tests
+export MQSERVER='DEV.APP.SVRCONN/TCP/localhost(1414)'
+
+# Run tests
+go test -tags mqclient ./...
+
+# Clean up
+docker stop mq-test
+```
+
 ## 📖 Usage Examples
 
 ### NATS Pub/Sub

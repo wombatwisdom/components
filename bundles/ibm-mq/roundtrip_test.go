@@ -1,9 +1,11 @@
+//go:build mqclient
+
 package ibm_mq_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/wombatwisdom/components/bundles/ibm-mq"
+	ibm_mq "github.com/wombatwisdom/components/bundles/ibm-mq"
 	"github.com/wombatwisdom/components/framework/spec"
 	"github.com/wombatwisdom/components/framework/test"
 )

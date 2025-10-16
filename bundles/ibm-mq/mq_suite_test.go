@@ -32,7 +32,7 @@ func TestMQ(t *testing.T) {
 			Env: map[string]string{
 				"LICENSE":         "accept",
 				"MQ_QMGR_NAME":    "QM1",
-				"MQ_DEV":          "true", // Enable developer defaults
+				"MQ_DEV":          "true",     // Enable developer defaults
 				"MQ_APP_PASSWORD": "passw0rd", // Set a password for the app user
 			},
 			WaitingFor: wait.ForLog("Started web server").WithStartupTimeout(2 * time.Minute),

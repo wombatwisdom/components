@@ -2,6 +2,10 @@ version: "3"
 
 silent: true
 
+vars:
+  ALL_COMPONENTS: "aws-eventbridge aws-s3 ibm-mq mqtt nats"
+  SIMPLE_COMPONENTS: "aws-eventbridge aws-s3 mqtt nats"
+
 includes:
   bundles:
     taskfile: ./bundles/Taskfile.yml
@@ -65,35 +69,53 @@ tasks:
       - task: bundles:all:vet
 
   # Testing
+  test:all:
+    desc: Run all tests (unit + integration)
+    cmds:
+      - task: framework:test
+      - task: bundles:all:test
+        vars:
+          COMPONENTS: '{{.ALL_COMPONENTS}}'
+
   test:
     desc: Run all tests (unit + integration)
     cmds:
       - task: framework:test
       - task: bundles:all:test
+        vars:
+          COMPONENTS: '{{.SIMPLE_COMPONENTS}}'
 
   test:unit:
     desc: Run unit tests only (fast, no external dependencies)
     cmds:
       - task: framework:test:unit
       - task: bundles:all:test:unit
+        vars:
+          COMPONENTS: '{{.SIMPLE_COMPONENTS}}'
 
   test:integration:
     desc: Run integration tests only (requires external services)
     cmds:
       - task: framework:test:integration
       - task: bundles:all:test:integration
+        vars:
+          COMPONENTS: '{{.SIMPLE_COMPONENTS}}'
 
   test:race:
     desc: Run all tests with race detector
     cmds:
       - task: framework:test:race
       - task: bundles:all:test:race
+        vars:
+          COMPONENTS: '{{.SIMPLE_COMPONENTS}}'
 
   test:coverage:
     desc: Run tests with coverage report
     cmds:
       - task: framework:test:coverage
       - task: bundles:all:test:coverage
+        vars:
+          COMPONENTS: '{{.SIMPLE_COMPONENTS}}'
 
   # Validation and Build
   validate:
@@ -101,12 +123,16 @@ tasks:
     cmds:
       - task: framework:validate
       - task: bundles:all:validate
+        vars:
+          COMPONENTS: '{{.ALL_COMPONENTS}}'
         
   build:
     desc: Build all workspace modules
     cmds:
       - task: framework:build
       - task: bundles:all:build
+        vars:
+          COMPONENTS: '{{.SIMPLE_COMPONENTS}}'
 
   build:check:
     desc: Check that all modules build successfully
