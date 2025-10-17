@@ -23,8 +23,7 @@ type OutputConfig struct {
 func NewOutput(env spec.Environment, config OutputConfig) (*Output, error) {
 	return &Output{
 		config: config,
-		// TODO: why are we passing env as logger?
-		log: env,
+		log:    env,
 	}, nil
 }
 
