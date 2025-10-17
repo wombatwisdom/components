@@ -66,6 +66,37 @@ func (i *Input) Init(ctx spec.ComponentContext) error {
 	cd.ChannelName = channelName
 	cd.ConnectionName = connectionName
 
+	if i.cfg.TLS != nil && i.cfg.TLS.Enabled {
+		if i.cfg.TLS.CipherSpec != "" {
+			cd.SSLCipherSpec = i.cfg.TLS.CipherSpec
+		}
+
+		// SSL Configuration Options
+		sco := ibmmq.NewMQSCO()
+
+		if i.cfg.TLS.KeyRepository != "" {
+			sco.KeyRepository = i.cfg.TLS.KeyRepository
+		}
+
+		if i.cfg.TLS.KeyRepositoryPassword != "" {
+			sco.KeyRepoPassword = i.cfg.TLS.KeyRepositoryPassword
+		}
+
+		if i.cfg.TLS.CertificateLabel != "" {
+			sco.CertificateLabel = i.cfg.TLS.CertificateLabel
+		}
+
+		if i.cfg.TLS.FipsRequired {
+			sco.FipsRequired = true
+		}
+
+		cno.SSLConfig = sco
+
+		if i.cfg.TLS.SSLPeerName != "" {
+			cd.SSLPeerName = i.cfg.TLS.SSLPeerName
+		}
+	}
+
 	// Reference the CD structure from the CNO and indicate client connection
 	cno.ClientConn = cd
 	cno.Options = ibmmq.MQCNO_CLIENT_BINDING + ibmmq.MQCNO_RECONNECT + ibmmq.MQCNO_HANDLE_SHARE_BLOCK

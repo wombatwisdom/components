@@ -92,4 +92,127 @@ var _ = Describe("Input", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
+
+	Context("when using TLS configuration", func() {
+		It("should configure TLS when enabled", func() {
+			// Note: Tried to test this using test containers. Got the server to start with a self-signed TLS cert.
+			// But could not get the client in the test to also use this cert. Seems like it expects an IBM utility
+			// to be present on the system.
+			Skip("Cannot setup client with gskit for cert handling.")
+			cfg := ibm_mq.InputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ChannelName:      "SYSTEM.TLS.SVRCONN",
+					ConnectionName:   "localhost(1414)",
+					TLS: &ibm_mq.TLSConfig{
+						Enabled:               true,
+						CipherSpec:            "TLS_RSA_WITH_AES_128_CBC_SHA256",
+						KeyRepository:         "/opt/mqm/ssl/key",
+						KeyRepositoryPassword: "password123",
+						CertificateLabel:      "ibmwebspheremqapp",
+					},
+				},
+				QueueName: "DEV.QUEUE.1",
+			}
+			tlsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+
+			err := tlsInput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			tlsInput.Close(ctx)
+		})
+
+		It("should work without TLS when disabled", func() {
+			cfg := ibm_mq.InputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ChannelName:      "DEV.APP.SVRCONN",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - test container default credential
+					TLS: &ibm_mq.TLSConfig{
+						Enabled: false,
+					},
+				},
+				QueueName: "DEV.QUEUE.1",
+			}
+			nonTlsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+
+			err := nonTlsInput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			nonTlsInput.Close(ctx)
+		})
+
+		It("should handle nil TLS config as disabled", func() {
+			cfg := ibm_mq.InputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ChannelName:      "DEV.APP.SVRCONN",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - test container default credential
+					TLS:              nil,
+				},
+				QueueName: "DEV.QUEUE.1",
+			}
+			nilTlsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+
+			err := nilTlsInput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			nilTlsInput.Close(ctx)
+		})
+
+		It("should validate certificate label when provided", func() {
+			Skip("Cannot setup client with gskit for cert handling.")
+			cfg := ibm_mq.InputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ChannelName:      "SYSTEM.TLS.SVRCONN",
+					ConnectionName:   "localhost(1414)",
+					TLS: &ibm_mq.TLSConfig{
+						Enabled:          true,
+						CipherSpec:       "TLS_RSA_WITH_AES_128_CBC_SHA256",
+						KeyRepository:    "/opt/mqm/ssl/key",
+						CertificateLabel: "mycertlabel",
+					},
+				},
+				QueueName: "DEV.QUEUE.1",
+			}
+
+			tlsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+			// Note: This will fail to connect without a proper TLS server,
+			_ = tlsInput.Init(ctx)
+
+			// We should verify that:
+			// - cd.SSLCipherSpec was set correctly
+			// - sco.CertificateLabel was set to "mycertlabel"
+		})
+
+		It("should support FIPS mode when required", func() {
+			Skip("Cannot setup client with gskit for cert handling.")
+			cfg := ibm_mq.InputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ChannelName:      "SYSTEM.TLS.SVRCONN",
+					ConnectionName:   "localhost(1414)",
+					TLS: &ibm_mq.TLSConfig{
+						Enabled:       true,
+						CipherSpec:    "TLS_RSA_WITH_AES_128_CBC_SHA256",
+						KeyRepository: "/opt/mqm/ssl/key",
+						FipsRequired:  true,
+					},
+				},
+				QueueName: "DEV.QUEUE.1",
+			}
+
+			fipsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+
+			_ = fipsInput.Init(ctx)
+
+			// We should verify that:
+			// - sco.FipsRequired was set to true
+		})
+	})
 })

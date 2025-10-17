@@ -27,7 +27,7 @@ func TestMQ(t *testing.T) {
 
 		// Start IBM MQ container
 		req := testcontainers.ContainerRequest{
-			Image:        "icr.io/ibm-messaging/mq:latest",
+			Image:        "icr.io/ibm-messaging/mq:9.4.0.12-r1",
 			ExposedPorts: []string{"1414/tcp", "9443/tcp"},
 			Env: map[string]string{
 				"LICENSE":         "accept",

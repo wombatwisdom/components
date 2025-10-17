@@ -21,4 +21,36 @@ type CommonMQConfig struct {
 
 	// Optional: Application name for MQ connection identification
 	ApplicationName string `json:"application_name" yaml:"application_name"`
+
+	// Optional: TLS/SSL configuration for secure connections
+	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
+}
+
+// TLSConfig contains TLS/SSL configuration for secure IBM MQ connections
+type TLSConfig struct {
+	// Enable TLS encryption for the connection
+	Enabled bool `json:"enabled" yaml:"enabled"`
+
+	// The cipher specification to use for TLS
+	// Example: "TLS_RSA_WITH_AES_128_CBC_SHA256", "TLS_RSA_WITH_AES_256_CBC_SHA256", "ANY_TLS12_OR_HIGHER"
+	CipherSpec string `json:"cipher_spec,omitempty" yaml:"cipher_spec,omitempty"`
+
+	// Path to the key repository containing certificates
+	// For example: "/opt/mqm/ssl/key" (without file extension)
+	// The actual files would be key.kdb, key.sth, etc.
+	KeyRepository string `json:"key_repository,omitempty" yaml:"key_repository,omitempty"`
+
+	// Password for the key repository
+	KeyRepositoryPassword string `json:"key_repository_password,omitempty" yaml:"key_repository_password,omitempty"`
+
+	// Certificate label to use from the key repository
+	// If empty, the default certificate will be used
+	CertificateLabel string `json:"certificate_label,omitempty" yaml:"certificate_label,omitempty"`
+
+	// Optional: Peer name for SSL/TLS validation
+	// Used to verify the DN of the certificate from the peer queue manager or client
+	SSLPeerName string `json:"ssl_peer_name,omitempty" yaml:"ssl_peer_name,omitempty"`
+
+	// Require FIPS 140-2 compliant algorithms
+	FipsRequired bool `json:"fips_required,omitempty" yaml:"fips_required,omitempty"`
 }
