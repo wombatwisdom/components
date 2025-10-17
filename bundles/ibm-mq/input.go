@@ -100,7 +100,13 @@ func (i *Input) Init(ctx spec.ComponentContext) error {
 	// Reference the CD structure from the CNO and indicate client connection
 	cno.ClientConn = cd
 	cno.Options = ibmmq.MQCNO_CLIENT_BINDING + ibmmq.MQCNO_RECONNECT + ibmmq.MQCNO_HANDLE_SHARE_BLOCK
-	cno.ApplName = "WombatWisdom MQ Input" // TODO: this should probably be unique. Or pass a nex instance or something
+
+	hostname, _ := os.Hostname()
+	maxHostLen := 16
+	if len(hostname) > maxHostLen {
+		hostname = hostname[:maxHostLen]
+	}
+	cno.ApplName = fmt.Sprintf("WW MQ Input %s", hostname)
 
 	// auth
 	if i.cfg.UserId != "" {

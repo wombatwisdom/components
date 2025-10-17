@@ -113,7 +113,13 @@ func (o *Output) Init(ctx spec.ComponentContext) error {
 	// Reference the CD structure from the CNO and indicate client connection
 	cno.ClientConn = cd
 	cno.Options = ibmmq.MQCNO_CLIENT_BINDING + ibmmq.MQCNO_RECONNECT + ibmmq.MQCNO_HANDLE_SHARE_BLOCK
-	cno.ApplName = "WombatWisdom MQ Output"
+
+	hostname, _ := os.Hostname()
+	maxHostLen := 15
+	if len(hostname) > maxHostLen {
+		hostname = hostname[:maxHostLen]
+	}
+	cno.ApplName = fmt.Sprintf("WW MQ Output %s", hostname)
 
 	// Configure authentication if provided
 	if o.cfg.UserId != "" {
