@@ -203,8 +203,14 @@ func (o *Output) Close(ctx spec.ComponentContext) error {
 func (o *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
 	for idx, message := range batch.Messages() {
 		if err := o.WriteMessage(ctx, message); err != nil {
+			if rollbackErr := o.qmgr.Back(); rollbackErr != nil {
+				o.env.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
 			return fmt.Errorf("batch #%d: %w", idx, err)
 		}
+	}
+	if err := o.qmgr.Cmit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	return nil
 }
@@ -236,7 +242,7 @@ func (o *Output) WriteMessage(ctx spec.ComponentContext, message spec.Message) e
 	mqmd, hasCorrelId := o.createMQMD(message)
 	pmo := ibmmq.NewMQPMO()
 
-	pmoOptions := ibmmq.MQPMO_NO_SYNCPOINT + ibmmq.MQPMO_NEW_MSG_ID
+	pmoOptions := ibmmq.MQPMO_SYNCPOINT + ibmmq.MQPMO_NEW_MSG_ID
 	if !hasCorrelId {
 		pmoOptions += ibmmq.MQPMO_NEW_CORREL_ID
 	}

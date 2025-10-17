@@ -685,4 +685,137 @@ var _ = Describe("Output", func() {
 
 		})
 	})
+
+	Context("when using transactional writes", func() {
+		It("should rollback all messages on batch failure", func() {
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueName: "DEV.QUEUE.1",
+			}
+			transactionalOutput := ibm_mq.NewOutput(env, cfg)
+
+			err := transactionalOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer transactionalOutput.Close(ctx)
+
+			// Create a batch with multiple messages
+			msg1 := spec.NewBytesMessage([]byte("transaction test message 1"))
+			msg2 := spec.NewBytesMessage([]byte("transaction test message 2"))
+
+			// Create a third message with invalid priority that will cause failure
+			msg3 := spec.NewBytesMessage([]byte("transaction test message 3"))
+			msg3.SetMetadata("mq_priority", "999") // Invalid priority - must be 0-9
+
+			batch := ctx.NewBatch(msg1, msg2, msg3)
+
+			// Create a direct connection to check queue state
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			// Open queue for checking
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_BROWSE + ibmmq.MQOO_FAIL_IF_QUIESCING
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			// Get initial queue depth
+			initialDepth := getQueueDepth(qObj)
+
+			// Write the batch - should fail on third message due to invalid priority
+			err = transactionalOutput.Write(ctx, batch)
+			Expect(err).To(HaveOccurred(), "Write should fail due to invalid priority")
+
+			// Check that NO messages were committed (all rolled back)
+			finalDepth := getQueueDepth(qObj)
+			Expect(finalDepth).To(Equal(initialDepth), "No messages should be committed after rollback")
+		})
+
+		It("should commit messages only after successful batch write", func() {
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueName: "DEV.QUEUE.1",
+			}
+			transactionalOutput := ibm_mq.NewOutput(env, cfg)
+
+			err := transactionalOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer transactionalOutput.Close(ctx)
+
+			// Create a message
+			msg := spec.NewBytesMessage([]byte("commit test message"))
+			batch := ctx.NewBatch(msg)
+
+			// Create a direct connection to monitor queue
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_INPUT_AS_Q_DEF + ibmmq.MQOO_FAIL_IF_QUIESCING
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			// Write the message (with proper transaction handling, it should be committed)
+			err = transactionalOutput.Write(ctx, batch)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify message was committed by trying to read it
+			gmo := ibmmq.NewMQGMO()
+			gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT + ibmmq.MQGMO_WAIT
+			gmo.WaitInterval = 1000 // 1 second timeout
+
+			buffer := make([]byte, 1024)
+			datalen, err := qObj.Get(ibmmq.NewMQMD(), gmo, buffer)
+			Expect(err).ToNot(HaveOccurred(), "Should be able to read the committed message")
+			Expect(datalen).To(BeNumerically(">", 0))
+			Expect(string(buffer[:datalen])).To(Equal("commit test message"))
+		})
+	})
 })
+
+// Helper function to get queue depth
+func getQueueDepth(qObj ibmmq.MQObject) int32 {
+	// Get queue attributes to check depth
+	selectors := []int32{ibmmq.MQIA_CURRENT_Q_DEPTH}
+	attrs, err := qObj.Inq(selectors)
+	if err != nil {
+		return -1
+	}
+	if depth, ok := attrs[ibmmq.MQIA_CURRENT_Q_DEPTH].(int32); ok {
+		return depth
+	}
+	return -1
+}
