@@ -223,36 +223,37 @@ func (o *Output) createMQMD(message spec.Message) (*ibmmq.MQMD, bool) {
 	hasCorrelId := false
 
 	// Set format
-	// TODO: fix / implement this
-	//if o.cfg.Format != nil {
-	//	mqmd.Format = *o.cfg.Format
-	//} else {
-	//	mqmd.Format = "MQSTR"
-	//}
+	if o.cfg.Format != "" {
+		mqmd.Format = o.cfg.Format
+	} else {
+		mqmd.Format = "MQSTR"
+	}
 
 	// Set CCSID
-	// TODO: fix / implement this
-	//if o.cfg.Ccsid != nil {
-	//	if ccsidInt, err := strconv.Atoi(*o.cfg.Ccsid); err == nil {
-	//		mqmd.CodedCharSetId = int32(ccsidInt)
-	//	} else {
-	//		mqmd.CodedCharSetId = 1208 // UTF-8 default
-	//	}
-	//} else {
-	//	mqmd.CodedCharSetId = 1208 // UTF-8 default
-	//}
+	if o.cfg.Ccsid != "" {
+		if ccsidInt, err := strconv.Atoi(o.cfg.Ccsid); err == nil {
+			mqmd.CodedCharSetId = int32(ccsidInt)
+		} else {
+			// If parsing fails, use UTF-8 default
+			o.env.Warnf("Failed to parse CCSID '%s', using default 1208 (UTF-8): %v", o.cfg.Ccsid, err)
+			mqmd.CodedCharSetId = 1208
+		}
+	} else {
+		mqmd.CodedCharSetId = 1208 // UTF-8 default
+	}
 
 	// Set encoding
-	// TODO: fix / implement this
-	//if o.cfg.Encoding != nil {
-	//	if encodingInt, err := strconv.Atoi(*o.cfg.Encoding); err == nil {
-	//		mqmd.Encoding = int32(encodingInt)
-	//	} else {
-	//		mqmd.Encoding = 546 // default encoding
-	//	}
-	//} else {
-	//	mqmd.Encoding = 546 // default encoding
-	//}
+	if o.cfg.Encoding != "" {
+		if encodingInt, err := strconv.Atoi(o.cfg.Encoding); err == nil {
+			mqmd.Encoding = int32(encodingInt)
+		} else {
+			// If parsing fails, use little-endian default
+			o.env.Warnf("Failed to parse encoding '%s', using default 546 (little-endian): %v", o.cfg.Encoding, err)
+			mqmd.Encoding = 546
+		}
+	} else {
+		mqmd.Encoding = 546 // default encoding (little-endian)
+	}
 
 	// Apply metadata to MQMD if it passes the filter
 	metadataMap := make(map[string]any)

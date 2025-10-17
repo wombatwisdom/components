@@ -22,6 +22,20 @@ type OutputConfig struct {
 
 	// Metadata configuration for filtering message headers
 	Metadata *MetadataConfig `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+
+	// The format of the message data (e.g., "MQSTR" for string, "MQHRF2" for RFH2 headers)
+	// Default: "MQSTR"
+	Format string `json:"format,omitempty" yaml:"format,omitempty"`
+
+	// The Coded Character Set Identifier for the message
+	// Common values: "1208" (UTF-8), "819" (ISO-8859-1)
+	// Default: "1208"
+	Ccsid string `json:"ccsid,omitempty" yaml:"ccsid,omitempty"`
+
+	// The encoding of numeric data in the message
+	// Common values: "546" (Linux/Windows little-endian), "273" (big-endian)
+	// Default: "546"
+	Encoding string `json:"encoding,omitempty" yaml:"encoding,omitempty"`
 }
 
 // MetadataConfig defines metadata filtering options

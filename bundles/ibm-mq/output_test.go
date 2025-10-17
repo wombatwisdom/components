@@ -312,5 +312,284 @@ var _ = Describe("Output", func() {
 			// Default priority should be 0
 			Expect(receivedMQMD.Priority).To(Equal(int32(0)))
 		})
+
+		It("should apply message format configuration", func() {
+			// Test with MQSTR format
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueName: "DEV.QUEUE.1",
+				Format:    "MQSTR",
+			}
+
+			formattedOutput := ibm_mq.NewOutput(env, cfg)
+			err := formattedOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer formattedOutput.Close(ctx)
+
+			msg := spec.NewBytesMessage([]byte("format test message"))
+
+			recv := make(chan *ibmmq.MQMD)
+			ready := make(chan struct{})
+
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_INPUT_EXCLUSIVE
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			close(ready)
+
+			go func() {
+				defer close(recv)
+				getmqmd := ibmmq.NewMQMD()
+				gmo := ibmmq.NewMQGMO()
+				gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT | ibmmq.MQGMO_WAIT
+				gmo.WaitInterval = 3000
+
+				buffer := make([]byte, 1024)
+				_, err := qObj.Get(getmqmd, gmo, buffer)
+				if err == nil {
+					recv <- getmqmd
+				}
+			}()
+
+			<-ready
+			Expect(formattedOutput.Write(ctx, ctx.NewBatch(msg))).To(Succeed())
+
+			var receivedMQMD *ibmmq.MQMD
+			Eventually(recv).Should(Receive(&receivedMQMD))
+
+			// Verify format is set correctly
+			// IBM MQ library trims spaces when retrieving the format
+			Expect(receivedMQMD.Format).To(Equal("MQSTR"))
+		})
+
+		It("should apply CCSID configuration", func() {
+			// Test with ISO-8859-1 CCSID (non-default value)
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueName: "DEV.QUEUE.1",
+				Ccsid:     "819", // ISO-8859-1 (non-default to ensure we're actually setting it)
+			}
+
+			ccsidOutput := ibm_mq.NewOutput(env, cfg)
+			err := ccsidOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer ccsidOutput.Close(ctx)
+
+			msg := spec.NewBytesMessage([]byte("ccsid test message"))
+
+			recv := make(chan *ibmmq.MQMD)
+			ready := make(chan struct{})
+
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_INPUT_EXCLUSIVE
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			close(ready)
+
+			go func() {
+				defer close(recv)
+				getmqmd := ibmmq.NewMQMD()
+				gmo := ibmmq.NewMQGMO()
+				gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT | ibmmq.MQGMO_WAIT
+				gmo.WaitInterval = 3000
+
+				buffer := make([]byte, 1024)
+				_, err := qObj.Get(getmqmd, gmo, buffer)
+				if err == nil {
+					recv <- getmqmd
+				}
+			}()
+
+			<-ready
+			Expect(ccsidOutput.Write(ctx, ctx.NewBatch(msg))).To(Succeed())
+
+			var receivedMQMD *ibmmq.MQMD
+			Eventually(recv).Should(Receive(&receivedMQMD))
+
+			// Verify CCSID is set to ISO-8859-1 (819), not the default
+			Expect(receivedMQMD.CodedCharSetId).To(Equal(int32(819)))
+		})
+
+		It("should apply encoding configuration", func() {
+			// Test with big-endian encoding (non-default value)
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueName: "DEV.QUEUE.1",
+				Encoding:  "273", // Big-endian (non-default to ensure we're actually setting it)
+			}
+
+			encodingOutput := ibm_mq.NewOutput(env, cfg)
+			err := encodingOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer encodingOutput.Close(ctx)
+
+			msg := spec.NewBytesMessage([]byte("encoding test message"))
+
+			recv := make(chan *ibmmq.MQMD)
+			ready := make(chan struct{})
+
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_INPUT_EXCLUSIVE
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			close(ready)
+
+			go func() {
+				defer close(recv)
+				getmqmd := ibmmq.NewMQMD()
+				gmo := ibmmq.NewMQGMO()
+				gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT | ibmmq.MQGMO_WAIT
+				gmo.WaitInterval = 3000
+
+				buffer := make([]byte, 1024)
+				_, err := qObj.Get(getmqmd, gmo, buffer)
+				if err == nil {
+					recv <- getmqmd
+				}
+			}()
+
+			<-ready
+			Expect(encodingOutput.Write(ctx, ctx.NewBatch(msg))).To(Succeed())
+
+			var receivedMQMD *ibmmq.MQMD
+			Eventually(recv).Should(Receive(&receivedMQMD))
+
+			// Verify encoding is set to big-endian (273), not the default
+			Expect(receivedMQMD.Encoding).To(Equal(int32(273)))
+		})
+
+		It("should use defaults when format/encoding not specified", func() {
+			// Create output without format/encoding configuration
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueName: "DEV.QUEUE.1",
+			}
+
+			defaultOutput := ibm_mq.NewOutput(env, cfg)
+			err := defaultOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer defaultOutput.Close(ctx)
+
+			msg := spec.NewBytesMessage([]byte("default format test"))
+
+			recv := make(chan *ibmmq.MQMD)
+			ready := make(chan struct{})
+
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_INPUT_EXCLUSIVE
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			close(ready)
+
+			go func() {
+				defer close(recv)
+				getmqmd := ibmmq.NewMQMD()
+				gmo := ibmmq.NewMQGMO()
+				gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT | ibmmq.MQGMO_WAIT
+				gmo.WaitInterval = 3000
+
+				buffer := make([]byte, 1024)
+				_, err := qObj.Get(getmqmd, gmo, buffer)
+				if err == nil {
+					recv <- getmqmd
+				}
+			}()
+
+			<-ready
+			Expect(defaultOutput.Write(ctx, ctx.NewBatch(msg))).To(Succeed())
+
+			var receivedMQMD *ibmmq.MQMD
+			Eventually(recv).Should(Receive(&receivedMQMD))
+
+			// Verify defaults are applied
+			// IBM MQ library trims spaces when retrieving the format
+			Expect(receivedMQMD.Format).To(Equal("MQSTR"))
+			Expect(receivedMQMD.CodedCharSetId).To(Equal(int32(1208))) // Our UTF-8 default
+			Expect(receivedMQMD.Encoding).To(Equal(int32(546)))        // Our little-endian default
+		})
 	})
 })
