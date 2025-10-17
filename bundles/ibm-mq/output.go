@@ -5,6 +5,7 @@ package ibm_mq
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -200,18 +201,15 @@ func (o *Output) WriteMessage(ctx spec.ComponentContext, message spec.Message) e
 		return fmt.Errorf("failed to get message data: %w", err)
 	}
 
-	// Create MQMD and MQPMO structures
-	mqmd := o.createMQMD(message)
+	mqmd, hasCorrelId := o.createMQMD(message)
 	pmo := ibmmq.NewMQPMO()
-	pmo.Options = ibmmq.MQPMO_NO_SYNCPOINT + ibmmq.MQPMO_NEW_MSG_ID + ibmmq.MQPMO_NEW_CORREL_ID
 
-	// Add message properties if metadata filter is configured
-	if o.metadataFilter != nil {
-		// TODO: Add message properties support when available in MQ Go client
-		// For now, we can add metadata to the MQMD structure where applicable
+	pmoOptions := ibmmq.MQPMO_NO_SYNCPOINT + ibmmq.MQPMO_NEW_MSG_ID
+	if !hasCorrelId {
+		pmoOptions += ibmmq.MQPMO_NEW_CORREL_ID
 	}
+	pmo.Options = pmoOptions
 
-	// Put message to queue
 	err = queue.Put(mqmd, pmo, data)
 	if err != nil {
 		return fmt.Errorf("failed to put message to queue %s: %w", queueName, err)
@@ -220,8 +218,9 @@ func (o *Output) WriteMessage(ctx spec.ComponentContext, message spec.Message) e
 	return nil
 }
 
-func (o *Output) createMQMD(message spec.Message) *ibmmq.MQMD {
+func (o *Output) createMQMD(message spec.Message) (*ibmmq.MQMD, bool) {
 	mqmd := ibmmq.NewMQMD()
+	hasCorrelId := false
 
 	// Set format
 	// TODO: fix / implement this
@@ -255,29 +254,47 @@ func (o *Output) createMQMD(message spec.Message) *ibmmq.MQMD {
 	//	mqmd.Encoding = 546 // default encoding
 	//}
 
-	// Try to set priority from metadata
-	// TODO: fix / implement this
-	//if priority, exists := message.Metadata()["mq_priority"]; exists {
-	//	if priorityInt, err := strconv.Atoi(fmt.Sprintf("%v", priority)); err == nil {
-	//		mqmd.Priority = int32(priorityInt)
-	//	}
-	//}
+	// Apply metadata to MQMD if it passes the filter
+	metadataMap := make(map[string]any)
+	for key, value := range message.Metadata() {
+		metadataMap[key] = value
+	}
 
-	// Try to set persistence from metadata
-	// TODO: fix / implement this
-	//if persistence, exists := message.Metadata()["mq_persistence"]; exists {
-	//	if persistenceInt, err := strconv.Atoi(fmt.Sprintf("%v", persistence)); err == nil {
-	//		mqmd.Persistence = int32(persistenceInt)
-	//	}
-	//}
+	if o.shouldIncludeMetadata("mq_priority") {
+		if priority, exists := metadataMap["mq_priority"]; exists {
+			if priorityInt, err := strconv.Atoi(fmt.Sprintf("%v", priority)); err == nil {
+				mqmd.Priority = int32(priorityInt)
+			}
+		}
+	}
 
-	// Try to set correlation ID from metadata
-	// TODO: fix / implement this
-	//if correlId, exists := message.Metadata()["mq_correlation_id"]; exists {
-	//	if correlIdStr := fmt.Sprintf("%v", correlId); len(correlIdStr) <= 24 {
-	//		copy(mqmd.CorrelId[:], []byte(correlIdStr))
-	//	}
-	//}
+	if o.shouldIncludeMetadata("mq_persistence") {
+		if persistence, exists := metadataMap["mq_persistence"]; exists {
+			if persistenceInt, err := strconv.Atoi(fmt.Sprintf("%v", persistence)); err == nil {
+				mqmd.Persistence = int32(persistenceInt)
+			}
+		}
+	}
 
-	return mqmd
+	if o.shouldIncludeMetadata("mq_correlation_id") {
+		if correlId, exists := metadataMap["mq_correlation_id"]; exists {
+			if correlIdStr := fmt.Sprintf("%v", correlId); len(correlIdStr) <= 24 {
+				copy(mqmd.CorrelId[:], []byte(correlIdStr))
+				hasCorrelId = true
+			}
+		}
+	}
+
+	return mqmd, hasCorrelId
+}
+
+// shouldIncludeMetadata checks if a metadata key should be included based on the filter
+func (o *Output) shouldIncludeMetadata(key string) bool {
+	// If no filter is configured, include all metadata
+	if o.metadataFilter == nil {
+		return true
+	}
+
+	// Use the metadata filter to check if the key should be included
+	return o.metadataFilter.Include(key)
 }
