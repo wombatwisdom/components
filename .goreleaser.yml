@@ -1,0 +1,98 @@
+version: 2
+
+project_name: wombatwisdom-components
+
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=0
+
+git:
+  ignore_tags:
+    - '*/*'  # Ignore component-specific tags like bundles/*/v*
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+# Skip builds since this is a library
+builds:
+  - skip: true
+
+archives:
+  - id: source
+    meta: true
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title "source" }}
+    formats:
+      - tar.gz
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ .Tag }}-SNAPSHOT"
+
+release:
+  github:
+    owner: wombatwisdom
+    name: components
+  
+  name_template: "{{.Version}}"
+  
+  # Automatically generate release notes
+  footer: |
+    ---
+    
+    ### Installation
+    
+    ```bash
+    go get github.com/wombatwisdom/components@{{.Version}}
+    ```
+    
+    ### Docker Images
+    
+    Components are available as part of the Wombat runtime.
+
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: '✨ Features'
+      regexp: '^feat(\(.+\))?: .+'
+      order: 0
+    - title: '🐛 Bug Fixes'
+      regexp: '^fix(\(.+\))?: .+'
+      order: 1
+    - title: '🔨 Refactoring'
+      regexp: '^refactor(\(.+\))?: .+'
+      order: 2
+    - title: '📚 Documentation'
+      regexp: '^docs?(\(.+\))?: .+'
+      order: 3
+    - title: '🧪 Testing'
+      regexp: '^test(\(.+\))?: .+'
+      order: 4
+    - title: '🏗️ Chore'
+      regexp: '^chore(\(.+\))?: .+'
+      order: 5
+    - title: '🎨 Style'
+      regexp: '^style(\(.+\))?: .+'
+      order: 6
+    - title: '⚡ Performance'
+      regexp: '^perf(\(.+\))?: .+'
+      order: 7
+    - title: '🔧 CI/CD'
+      regexp: '^ci(\(.+\))?: .+'
+      order: 8
+    - title: 'Other Changes'
+      order: 999
+
+  filters:
+    exclude:
+      - '^Merge pull request'
+      - '^Merge branch'
+      - '^Update dependencies'

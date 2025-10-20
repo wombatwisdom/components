@@ -40,6 +40,16 @@ tasks:
     cmds:
       - task: common:test
 
+  test:unit:
+    desc: Run unit tests only
+    cmds:
+      - task: common:test:unit
+
+  test:integration:
+    desc: Run integration tests only
+    cmds:
+      - task: common:test:integration
+
   test:coverage:
     desc: Run component tests with coverage
     cmds:

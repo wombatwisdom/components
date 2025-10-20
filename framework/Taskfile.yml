@@ -17,9 +17,19 @@ tasks:
       - 'echo "✅ All checks passed!"'
   
   test:
-    desc: Run framework tests
+    desc: Run all framework tests
     cmds:
       - go test ./... -v
+
+  test:unit:
+    desc: Run unit tests only (short tests)
+    cmds:
+      - go test -short ./... -v
+
+  test:integration:
+    desc: Run integration tests only
+    cmds:
+      - go test -run Integration ./... -v
 
   test:coverage:
     desc: Run framework tests with coverage

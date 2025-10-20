@@ -3,7 +3,7 @@ package spec
 import "iter"
 
 type MessageFactory interface {
-	NewBatch() Batch
+	NewBatch(msg ...Message) Batch
 	NewMessage() Message
 }
 

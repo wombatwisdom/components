@@ -23,9 +23,19 @@ tasks:
       - go mod tidy
 
   test:
-    desc: Run component tests
+    desc: Run all component tests
     cmds:
       - go test ./... -v
+
+  test:unit:
+    desc: Run unit tests only (short tests)
+    cmds:
+      - go test -short ./... -v
+
+  test:integration:
+    desc: Run integration tests only
+    cmds:
+      - go test -run Integration ./... -v
 
   test:coverage:
     desc: Run component tests with coverage

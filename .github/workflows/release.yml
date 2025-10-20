@@ -3,9 +3,8 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
-      - 'components/*/v*'
-      - 'framework/v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'      # Only final releases (v0.1.0)
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc*'  # Only RCs (v0.1.0-rc8)
 
 permissions:
   contents: write
@@ -50,147 +49,18 @@ jobs:
           echo "prerelease=false" >> $GITHUB_OUTPUT
         fi
         
-        # Determine release type and name
-        if [[ "$TAG" == "v"* ]] && [[ "$TAG" != *"/"* ]]; then
-          # Main repository release
-          echo "type=main" >> $GITHUB_OUTPUT
-          echo "name=Release $TAG" >> $GITHUB_OUTPUT
-          echo "component=" >> $GITHUB_OUTPUT
-        elif [[ "$TAG" == "components/"* ]]; then
-          # Component release
-          COMPONENT=$(echo "$TAG" | cut -d'/' -f2)
-          VERSION=$(echo "$TAG" | cut -d'/' -f3)
-          echo "type=component" >> $GITHUB_OUTPUT
-          echo "name=$COMPONENT Component $VERSION" >> $GITHUB_OUTPUT
-          echo "component=$COMPONENT" >> $GITHUB_OUTPUT
-        elif [[ "$TAG" == "framework/"* ]]; then
-          # Framework release
-          VERSION=$(echo "$TAG" | cut -d'/' -f2)
-          echo "type=framework" >> $GITHUB_OUTPUT
-          echo "name=Framework $VERSION" >> $GITHUB_OUTPUT
-          echo "component=framework" >> $GITHUB_OUTPUT
-        fi
+        echo "name=Release $TAG" >> $GITHUB_OUTPUT
 
-    - name: Validate affected modules
+    - name: Run pre-release checks
       run: |
-        if [ "${{ steps.release_info.outputs.type }}" == "main" ]; then
-          # For main releases, validate everything
-          task validate
-          task test
-        elif [ "${{ steps.release_info.outputs.type }}" == "component" ]; then
-          # For component releases, validate specific component
-          task components:${{ steps.release_info.outputs.component }}:validate
-          task components:${{ steps.release_info.outputs.component }}:test
-        elif [ "${{ steps.release_info.outputs.type }}" == "framework" ]; then
-          # For framework releases, validate framework
-          task framework:validate
-          task framework:test
-        fi
+        task check
+        task test
 
-    - name: Generate changelog
-      id: changelog
-      run: |
-        TAG="${{ steps.release_info.outputs.tag }}"
-        
-        # Find previous tag of the same type
-        if [ "${{ steps.release_info.outputs.type }}" == "main" ]; then
-          PREVIOUS_TAG=$(git tag -l "v*" | grep -v "/" | sort -V | grep -B1 "^$TAG$" | head -1)
-        elif [ "${{ steps.release_info.outputs.type }}" == "component" ]; then
-          PATTERN="components/${{ steps.release_info.outputs.component }}/v*"
-          PREVIOUS_TAG=$(git tag -l "$PATTERN" | sort -V | grep -B1 "^$TAG$" | head -1)
-        elif [ "${{ steps.release_info.outputs.type }}" == "framework" ]; then
-          PREVIOUS_TAG=$(git tag -l "framework/v*" | sort -V | grep -B1 "^$TAG$" | head -1)
-        fi
-        
-        # Generate changelog
-        if [ -n "$PREVIOUS_TAG" ] && [ "$PREVIOUS_TAG" != "$TAG" ]; then
-          echo "## Changes since $PREVIOUS_TAG" > CHANGELOG_TEMP.md
-          echo "" >> CHANGELOG_TEMP.md
-          
-          # For component/framework releases, filter changes
-          if [ "${{ steps.release_info.outputs.type }}" == "component" ]; then
-            echo "### Changes in ${{ steps.release_info.outputs.component }} component:" >> CHANGELOG_TEMP.md
-            git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG..$TAG" -- "components/${{ steps.release_info.outputs.component }}/" >> CHANGELOG_TEMP.md
-          elif [ "${{ steps.release_info.outputs.type }}" == "framework" ]; then
-            echo "### Changes in framework:" >> CHANGELOG_TEMP.md
-            git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG..$TAG" -- "framework/" >> CHANGELOG_TEMP.md
-          else
-            # For main releases, categorize commits
-            echo "### Features" >> CHANGELOG_TEMP.md
-            git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG..$TAG" | grep -E "^- feat:" | sed 's/^- feat: /- /' >> CHANGELOG_TEMP.md || echo "- None" >> CHANGELOG_TEMP.md
-            
-            echo "" >> CHANGELOG_TEMP.md
-            echo "### Fixes" >> CHANGELOG_TEMP.md
-            git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG..$TAG" | grep -E "^- fix:" | sed 's/^- fix: /- /' >> CHANGELOG_TEMP.md || echo "- None" >> CHANGELOG_TEMP.md
-            
-            echo "" >> CHANGELOG_TEMP.md
-            echo "### Other Changes" >> CHANGELOG_TEMP.md
-            git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG..$TAG" | grep -vE "^- (feat|fix):" >> CHANGELOG_TEMP.md || echo "- None" >> CHANGELOG_TEMP.md
-          fi
-        else
-          echo "## Initial Release" > CHANGELOG_TEMP.md
-          
-          if [ "${{ steps.release_info.outputs.type }}" == "component" ]; then
-            echo "Initial release of ${{ steps.release_info.outputs.component }} component" >> CHANGELOG_TEMP.md
-          elif [ "${{ steps.release_info.outputs.type }}" == "framework" ]; then
-            echo "Initial release of framework" >> CHANGELOG_TEMP.md
-          else
-            echo "Initial release of WombatWisdom Components" >> CHANGELOG_TEMP.md
-          fi
-        fi
-        
-        # Add component status for main releases
-        if [ "${{ steps.release_info.outputs.type }}" == "main" ]; then
-          echo "" >> CHANGELOG_TEMP.md
-          echo "### Component Versions" >> CHANGELOG_TEMP.md
-          echo "All components are released at version ${{ steps.release_info.outputs.tag }}" >> CHANGELOG_TEMP.md
-        fi
-        
-        # Set output for GitHub release
-        echo "changelog<<EOF" >> $GITHUB_OUTPUT
-        cat CHANGELOG_TEMP.md >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
-
-    - name: Create GitHub Release
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v6
+      with:
+        version: latest
+        args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        gh release create "${{ steps.release_info.outputs.tag }}" \
-          --title "${{ steps.release_info.outputs.name }}" \
-          --notes "${{ steps.changelog.outputs.changelog }}" \
-          ${{ steps.release_info.outputs.prerelease == 'true' && '--prerelease' || '' }}
 
-  # Optional: Build and upload binaries if needed
-  build-artifacts:
-    name: Build Documentation
-    runs-on: ubuntu-latest
-    needs: release
-    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '/')
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-
-    - name: Generate documentation
-      run: |
-        # This is a library project, so we'll generate documentation instead of binaries
-        echo "Generating documentation for release..."
-        
-        # Create a release notes file
-        cat > RELEASE_NOTES.md << EOF
-        # WombatWisdom Components ${GITHUB_REF#refs/tags/}
-        
-        This release includes the following components:
-        - AWS EventBridge
-        - AWS S3
-        - IBM MQ
-        - MQTT
-        - NATS
-        
-        See individual component documentation for details.
-        EOF
-        
-        # Upload to release
-        gh release upload "${GITHUB_REF#refs/tags/}" RELEASE_NOTES.md --clobber
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

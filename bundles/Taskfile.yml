@@ -53,10 +53,22 @@ tasks:
         task: '{{.ITEM}}:build'
 
   all:test:
-    desc: Run component tests
+    desc: Run all component tests
     cmds:
       - for: { var: COMPONENTS }
         task: '{{.ITEM}}:test'
+
+  all:test:unit:
+    desc: Run unit tests for all components
+    cmds:
+      - for: { var: COMPONENTS }
+        task: '{{.ITEM}}:test:unit'
+
+  all:test:integration:
+    desc: Run integration tests for all components
+    cmds:
+      - for: { var: COMPONENTS }
+        task: '{{.ITEM}}:test:integration'
 
   all:test:coverage:
     desc: Run component tests with coverage
@@ -64,7 +76,6 @@ tasks:
       - for: { var: COMPONENTS }
         task: '{{.ITEM}}:test:coverage'
         
-
   all:test:race:
     desc: Run component tests with race detector
     cmds:

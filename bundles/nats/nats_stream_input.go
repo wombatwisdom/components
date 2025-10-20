@@ -20,11 +20,6 @@ type StreamInput struct {
 	sys spec.System
 	cfg StreamConfig
 
-	stream        spec.Expression
-	subject       spec.Expression
-	filterSubject spec.Expression
-	consumerName  spec.Expression
-
 	js       jetstream.JetStream
 	consumer jetstream.Consumer
 	ctx      context.Context
@@ -55,38 +50,12 @@ func (si *StreamInput) Init(ctx spec.ComponentContext) error {
 	// Create context for consumer operations
 	si.ctx, si.cancel = context.WithCancel(context.Background())
 
-	// Parse expressions
-	var err error
-	si.stream, err = ctx.ParseExpression(si.cfg.Stream)
-	if err != nil {
-		return fmt.Errorf("failed to parse stream expression: %w", err)
-	}
-
-	si.subject, err = ctx.ParseExpression(si.cfg.Subject)
-	if err != nil {
-		return fmt.Errorf("failed to parse subject expression: %w", err)
-	}
-
-	if si.cfg.Consumer != nil && si.cfg.Consumer.FilterSubject != nil && *si.cfg.Consumer.FilterSubject != "" {
-		si.filterSubject, err = ctx.ParseExpression(*si.cfg.Consumer.FilterSubject)
-		if err != nil {
-			return fmt.Errorf("failed to parse filter subject expression: %w", err)
-		}
-	}
-
-	if si.cfg.Consumer != nil && si.cfg.Consumer.Name != nil && *si.cfg.Consumer.Name != "" {
-		si.consumerName, err = ctx.ParseExpression(*si.cfg.Consumer.Name)
-		if err != nil {
-			return fmt.Errorf("failed to parse consumer name expression: %w", err)
-		}
-	}
-
 	return si.createConsumer(ctx)
 }
 
 func (si *StreamInput) createConsumer(ctx spec.ComponentContext) error {
 	// Evaluate stream name
-	streamName, err := si.stream.EvalString(spec.MessageExpressionContext(ctx.NewMessage()))
+	streamName, err := si.cfg.Stream.Eval(spec.MessageExpressionContext(ctx.NewMessage()))
 	if err != nil {
 		return fmt.Errorf("failed to evaluate stream name: %w", err)
 	}
@@ -144,28 +113,26 @@ func (si *StreamInput) createConsumer(ctx spec.ComponentContext) error {
 		}
 
 		// Set filter subject if provided
-		if si.filterSubject != nil {
-			filterSubject, err := si.filterSubject.EvalString(spec.MessageExpressionContext(ctx.NewMessage()))
+		if si.cfg.Subject != nil {
+			filterSubject, err := si.cfg.Subject.Eval(spec.MessageExpressionContext(ctx.NewMessage()))
 			if err != nil {
 				return fmt.Errorf("failed to evaluate filter subject: %w", err)
 			}
-			if err == nil {
-				consumerConfig.FilterSubject = filterSubject
-			}
+
+			consumerConfig.FilterSubject = filterSubject
 		}
 
 		// Set consumer name and durable
-		if si.consumerName != nil {
-			consumerName, err := si.consumerName.EvalString(spec.MessageExpressionContext(ctx.NewMessage()))
+		if si.cfg.Consumer != nil && si.cfg.Consumer.Name != nil {
+			consumerName, err := si.cfg.Consumer.Name.Eval(spec.MessageExpressionContext(ctx.NewMessage()))
 			if err != nil {
 				return fmt.Errorf("failed to evaluate consumer name: %w", err)
 			}
-			if err == nil {
-				if si.cfg.Consumer.Durable {
-					consumerConfig.Durable = consumerName
-				} else {
-					consumerConfig.Name = consumerName
-				}
+
+			if si.cfg.Consumer.Durable {
+				consumerConfig.Durable = consumerName
+			} else {
+				consumerConfig.Name = consumerName
 			}
 		}
 	}
@@ -236,17 +203,15 @@ func (si *StreamInput) Read(ctx spec.ComponentContext) (spec.Batch, spec.Process
 		}
 
 		// Add JetStream metadata if configured
-		if si.cfg.Metadata == nil || si.cfg.Metadata.IncludeStreamInfo {
-			metadata, err := msg.Metadata()
-			if err == nil && metadata != nil {
-				m.SetMetadata("jetstream_stream", metadata.Stream)
-				m.SetMetadata("jetstream_consumer", metadata.Consumer)
-				m.SetMetadata("jetstream_sequence_stream", strconv.FormatUint(metadata.Sequence.Stream, 10))
-				m.SetMetadata("jetstream_sequence_consumer", strconv.FormatUint(metadata.Sequence.Consumer, 10))
-				m.SetMetadata("jetstream_pending", strconv.FormatUint(metadata.NumPending, 10))
-				m.SetMetadata("jetstream_delivered", strconv.FormatUint(metadata.NumDelivered, 10))
-				m.SetMetadata("jetstream_timestamp", metadata.Timestamp.Format(time.RFC3339))
-			}
+		metadata, err := msg.Metadata()
+		if err == nil && metadata != nil {
+			m.SetMetadata("jetstream_stream", metadata.Stream)
+			m.SetMetadata("jetstream_consumer", metadata.Consumer)
+			m.SetMetadata("jetstream_sequence_stream", strconv.FormatUint(metadata.Sequence.Stream, 10))
+			m.SetMetadata("jetstream_sequence_consumer", strconv.FormatUint(metadata.Sequence.Consumer, 10))
+			m.SetMetadata("jetstream_pending", strconv.FormatUint(metadata.NumPending, 10))
+			m.SetMetadata("jetstream_delivered", strconv.FormatUint(metadata.NumDelivered, 10))
+			m.SetMetadata("jetstream_timestamp", metadata.Timestamp.Format(time.RFC3339))
 		}
 
 		// Add basic NATS message metadata

@@ -44,17 +44,12 @@ func (m *mockComponentContext) Errorf(format string, args ...interface{}) {
 	m.env.Errorf(format, args...)
 }
 
-func (m *mockComponentContext) ParseExpression(expr string) (spec.Expression, error) {
-	factory := spec.NewExprLangExpressionFactory()
-	return factory.ParseExpression(expr)
-}
-
 func (m *mockComponentContext) BuildMetadataFilter(patterns []string, invert bool) (spec.MetadataFilter, error) {
 	return nil, nil // Mock implementation
 }
 
-func (m *mockComponentContext) NewBatch() spec.Batch {
-	return &mockBatch{messages: make([]spec.Message, 0)}
+func (m *mockComponentContext) NewBatch(msgs ...spec.Message) spec.Batch {
+	return &mockBatch{messages: msgs}
 }
 
 func (m *mockComponentContext) NewMessage() spec.Message {
@@ -62,22 +57,6 @@ func (m *mockComponentContext) NewMessage() spec.Message {
 		raw:      make([]byte, 0),
 		metadata: make(map[string]any),
 	}
-}
-
-func (m *mockComponentContext) Resources() spec.ResourceManager {
-	return &mockResourceManager{ctx: m.ctx}
-}
-
-func (m *mockComponentContext) Input(name string) (spec.Input, error) {
-	return nil, spec.ErrNotConnected
-}
-
-func (m *mockComponentContext) Output(name string) (spec.Output, error) {
-	return nil, spec.ErrNotConnected
-}
-
-func (m *mockComponentContext) System(name string) (spec.System, error) {
-	return nil, spec.ErrNotConnected
 }
 
 // Mock implementations for testing
@@ -127,45 +106,3 @@ func (m *mockMessage) Metadata() iter.Seq2[string, any] {
 		}
 	}
 }
-
-type mockResourceManager struct {
-	ctx context.Context
-}
-
-func (rm *mockResourceManager) Logger() spec.Logger {
-	return TestEnvironment()
-}
-
-func (rm *mockResourceManager) System(name string) (spec.System, error) {
-	return nil, spec.ErrNotConnected
-}
-
-func (rm *mockResourceManager) RegisterSystem(name string, sys spec.System) error {
-	return nil
-}
-
-func (rm *mockResourceManager) Context() context.Context {
-	return rm.ctx
-}
-
-func (rm *mockResourceManager) Metrics() spec.Metrics {
-	return &mockMetrics{} // Mock implementation
-}
-
-type mockMetrics struct{}
-
-func (m *mockMetrics) Counter(name string) spec.Counter { return &mockCounter{} }
-func (m *mockMetrics) Gauge(name string) spec.Gauge     { return &mockGauge{} }
-func (m *mockMetrics) Timer(name string) spec.Timer     { return &mockTimer{} }
-
-type mockCounter struct{}
-
-func (c *mockCounter) Inc(delta int64) {}
-
-type mockGauge struct{}
-
-func (g *mockGauge) Set(value float64) {}
-
-type mockTimer struct{}
-
-func (t *mockTimer) Record(duration float64) {}
