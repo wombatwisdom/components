@@ -15,7 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.8
 
 	// MQTT dependencies
-	github.com/eclipse/paho.mqtt.golang v1.5.0
+	github.com/eclipse/paho.mqtt.golang v1.5.1
 
 	// Framework dependencies (now unified)
 	github.com/expr-lang/expr v1.17.4
@@ -32,7 +32,7 @@ require (
 	// NATS dependencies
 	github.com/nats-io/jwt/v2 v2.8.0
 	github.com/nats-io/nats-server/v2 v2.12.0
-	github.com/nats-io/nats.go v1.45.0
+	github.com/nats-io/nats.go v1.47.0
 	github.com/nats-io/nkeys v0.4.11
 
 	// Testing dependencies
@@ -77,7 +77,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.42.0 // indirect
 	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/net v0.43.0 // indirect
+	golang.org/x/net v0.44.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/time v0.13.0 // indirect
