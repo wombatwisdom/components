@@ -12,7 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.36.7
 	github.com/aws/aws-sdk-go-v2/service/pipes v1.23.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.81.0
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.8
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.9
 
 	// MQTT dependencies
 	github.com/eclipse/paho.mqtt.golang v1.5.1
