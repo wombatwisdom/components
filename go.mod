@@ -25,7 +25,7 @@ require (
 	github.com/google/uuid v1.6.0
 
 	// IBM MQ dependencies
-	github.com/ibm-messaging/mq-golang/v5 v5.6.2
+	github.com/ibm-messaging/mq-golang/v5 v5.6.5
 	github.com/johannesboyne/gofakes3 v0.0.0-20250106100439-5c39aecd6999
 	github.com/mochi-mqtt/server/v2 v2.7.9
 
