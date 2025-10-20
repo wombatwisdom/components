@@ -19,7 +19,7 @@ require (
 
 	// Framework dependencies (now unified)
 	github.com/expr-lang/expr v1.17.4
-	github.com/go-viper/mapstructure/v2 v2.3.0
+	github.com/go-viper/mapstructure/v2 v2.4.0
 
 	// Utilities
 	github.com/google/uuid v1.6.0
