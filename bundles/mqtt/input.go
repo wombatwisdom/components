@@ -189,6 +189,14 @@ func (m *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 							msg.Topic(), msg.MessageID())
 					}
 				}
+			} else {
+				// Error occurred during processing - DO NOT ACK to ensure redelivery
+				if !m.EnableAutoAck {
+					m.log.Warnf("Not ACKing message (topic: %s, id: %d) due to processing error: %v - message will be redelivered",
+						msg.Topic(), msg.MessageID(), res)
+					// Force reconnection for immediate redelivery
+					m.client.Disconnect(0)
+				}
 			}
 			return nil
 		}, nil
