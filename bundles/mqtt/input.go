@@ -68,7 +68,6 @@ func (m *Input) Init(ctx spec.ComponentContext) error {
 	opts := NewClientOptions(m.InputConfig.CommonMQTTConfig).
 		SetCleanSession(m.CleanSession).
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
-			client.Disconnect(0)
 			m.closeMsgChan()
 			m.log.Errorf("Connection lost due to: %v\n", reason)
 		}).
@@ -194,10 +193,6 @@ func (m *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 				if !m.EnableAutoAck {
 					m.log.Warnf("Not ACKing message (topic: %s, id: %d) due to processing error: %v - message will be redelivered",
 						msg.Topic(), msg.MessageID(), res)
-					// Simulate connection loss by nulling client (don't disconnect cleanly)
-					// This ensures broker treats unACK'd message as lost and will redeliver
-					m.client = nil
-					m.closeMsgChan()
 				}
 			}
 			return nil
