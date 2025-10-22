@@ -39,9 +39,10 @@ type Input struct {
 	env spec.Environment
 	cfg InputConfig
 
-	qmgr    ibmmq.MQQueueManager
-	qObject ibmmq.MQObject
-	mutex   sync.Mutex
+	qmgr        ibmmq.MQQueueManager
+	qObject     ibmmq.MQObject
+	mutex       sync.Mutex
+	initialized bool
 }
 
 func (i *Input) Init(ctx spec.ComponentContext) error {
@@ -137,23 +138,25 @@ func (i *Input) Init(ctx spec.ComponentContext) error {
 		return fmt.Errorf("failed to open queue %s: %w", i.cfg.QueueName, err)
 	}
 	i.qObject = qObject
+	i.initialized = true
 
 	return nil
 }
 
 func (i *Input) Close(ctx spec.ComponentContext) error {
-	// Close the queue
+	if !i.initialized {
+		return nil
+	}
+
 	if err := i.qObject.Close(0); err != nil {
-		// Log error but continue cleanup
 		i.env.Errorf("Failed to close queue: %v", err)
 	}
 
-	// Disconnect from queue manager
 	if err := i.qmgr.Disc(); err != nil {
-		// Log error but continue cleanup
 		i.env.Errorf("Failed to disconnect from queue manager: %v", err)
 	}
 
+	i.initialized = false
 	return nil
 }
 

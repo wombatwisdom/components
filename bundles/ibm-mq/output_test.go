@@ -35,7 +35,7 @@ var _ = Describe("Output", func() {
 			QueueExpr: queueExpr,
 		}
 
-		output = ibm_mq.NewOutput(env, cfg)
+		output, _ = ibm_mq.NewOutput(env, cfg)
 
 		err = output.Init(ctx)
 		Expect(err).ToNot(HaveOccurred())
@@ -180,7 +180,7 @@ var _ = Describe("Output", func() {
 				},
 			}
 
-			filteredOutput := ibm_mq.NewOutput(env, cfg)
+			filteredOutput, _ := ibm_mq.NewOutput(env, cfg)
 			err := filteredOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer filteredOutput.Close(ctx)
@@ -254,7 +254,7 @@ var _ = Describe("Output", func() {
 				},
 			}
 
-			filteredOutput := ibm_mq.NewOutput(env, cfg)
+			filteredOutput, _ := ibm_mq.NewOutput(env, cfg)
 			err := filteredOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer filteredOutput.Close(ctx)
@@ -326,7 +326,7 @@ var _ = Describe("Output", func() {
 				Format:    "MQSTR",
 			}
 
-			formattedOutput := ibm_mq.NewOutput(env, cfg)
+			formattedOutput, _ := ibm_mq.NewOutput(env, cfg)
 			err := formattedOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer formattedOutput.Close(ctx)
@@ -396,7 +396,7 @@ var _ = Describe("Output", func() {
 				Ccsid:     "819", // ISO-8859-1 (non-default to ensure we're actually setting it)
 			}
 
-			ccsidOutput := ibm_mq.NewOutput(env, cfg)
+			ccsidOutput, _ := ibm_mq.NewOutput(env, cfg)
 			err := ccsidOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer ccsidOutput.Close(ctx)
@@ -465,7 +465,7 @@ var _ = Describe("Output", func() {
 				Encoding:  "273", // Big-endian (non-default to ensure we're actually setting it)
 			}
 
-			encodingOutput := ibm_mq.NewOutput(env, cfg)
+			encodingOutput, _ := ibm_mq.NewOutput(env, cfg)
 			err := encodingOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer encodingOutput.Close(ctx)
@@ -533,7 +533,7 @@ var _ = Describe("Output", func() {
 				QueueName: "DEV.QUEUE.1",
 			}
 
-			defaultOutput := ibm_mq.NewOutput(env, cfg)
+			defaultOutput, _ := ibm_mq.NewOutput(env, cfg)
 			err := defaultOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer defaultOutput.Close(ctx)
@@ -610,7 +610,7 @@ var _ = Describe("Output", func() {
 				},
 				QueueName: "DEV.QUEUE.1",
 			}
-			tlsOutput := ibm_mq.NewOutput(env, cfg)
+			tlsOutput, _ := ibm_mq.NewOutput(env, cfg)
 
 			// This should fail because SYSTEM.TLS.SVRCONN doesn't exist
 			// and the key repository likely doesn't exist either
@@ -635,7 +635,7 @@ var _ = Describe("Output", func() {
 				},
 				QueueName: "DEV.QUEUE.1",
 			}
-			nonTlsOutput := ibm_mq.NewOutput(env, cfg)
+			nonTlsOutput, _ := ibm_mq.NewOutput(env, cfg)
 
 			err := nonTlsOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -655,7 +655,7 @@ var _ = Describe("Output", func() {
 				},
 				QueueName: "DEV.QUEUE.1",
 			}
-			nilTlsOutput := ibm_mq.NewOutput(env, cfg)
+			nilTlsOutput, _ := ibm_mq.NewOutput(env, cfg)
 
 			err := nilTlsOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -679,7 +679,7 @@ var _ = Describe("Output", func() {
 				QueueName: "DEV.QUEUE.1",
 			}
 
-			tlsOutput := ibm_mq.NewOutput(env, cfg)
+			tlsOutput, _ := ibm_mq.NewOutput(env, cfg)
 
 			_ = tlsOutput.Init(ctx)
 
@@ -697,7 +697,7 @@ var _ = Describe("Output", func() {
 				},
 				QueueName: "DEV.QUEUE.1",
 			}
-			transactionalOutput := ibm_mq.NewOutput(env, cfg)
+			transactionalOutput, _ := ibm_mq.NewOutput(env, cfg)
 
 			err := transactionalOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -757,7 +757,7 @@ var _ = Describe("Output", func() {
 				},
 				QueueName: "DEV.QUEUE.1",
 			}
-			transactionalOutput := ibm_mq.NewOutput(env, cfg)
+			transactionalOutput, _ := ibm_mq.NewOutput(env, cfg)
 
 			err := transactionalOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
