@@ -19,11 +19,11 @@ const (
 )
 
 // NewInput creates a new MQ input component
-func NewInput(env spec.Environment, config InputConfig) *Input {
+func NewInput(env spec.Environment, config InputConfig) (*Input, error) {
 	return &Input{
 		env: env,
 		cfg: config,
-	}
+	}, nil
 }
 
 // Input receives messages from an IBM MQ queue.

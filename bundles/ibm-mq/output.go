@@ -18,11 +18,11 @@ const (
 )
 
 // NewOutput creates a new MQ output component
-func NewOutput(env spec.Environment, cfg OutputConfig) *Output {
+func NewOutput(env spec.Environment, cfg OutputConfig) (*Output, error) {
 	return &Output{
 		env: env,
 		cfg: cfg,
-	}
+	}, nil
 }
 
 //// NewOutputFromConfig creates an output from a spec.Config interface
