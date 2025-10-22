@@ -26,6 +26,9 @@ type OutputConfig struct {
 	QueueExpr  spec.Expression
 	NumThreads int
 	Metadata   *MetadataConfig
+	Format     string
+	Ccsid      string
+	Encoding   string
 }
 
 // MetadataConfig stub for non-mqclient builds
@@ -56,9 +59,11 @@ type SystemConfig struct {
 type TLSConfig struct {
 	Enabled               bool
 	CipherSpec            string
-	KeyRepository         *string
-	KeyRepositoryPassword *string
-	CertificateLabel      *string
+	KeyRepository         string
+	KeyRepositoryPassword string
+	CertificateLabel      string
+	SSLPeerName           string
+	FipsRequired          bool
 }
 
 // Stub implementations when IBM MQ client libraries are not available
@@ -95,8 +100,8 @@ type Input struct {
 	cfg InputConfig
 }
 
-func NewInput(env spec.Environment, config InputConfig) *Input {
-	return &Input{env: env, cfg: config}
+func NewInput(env spec.Environment, config InputConfig) (*Input, error) {
+	return &Input{env: env, cfg: config}, fmt.Errorf("IBM MQ client libraries not available - build with -tags mqclient")
 }
 
 func (i *Input) Init(ctx spec.ComponentContext) error {
@@ -117,8 +122,8 @@ type Output struct {
 	cfg OutputConfig
 }
 
-func NewOutput(env spec.Environment, cfg OutputConfig) *Output {
-	return &Output{env: env, cfg: cfg}
+func NewOutput(env spec.Environment, cfg OutputConfig) (*Output, error) {
+	return &Output{env: env, cfg: cfg}, fmt.Errorf("IBM MQ client libraries not available - build with -tags mqclient")
 }
 
 func NewOutputFromConfig(sys spec.System, config spec.Config) (*Output, error) {
