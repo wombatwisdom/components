@@ -2,6 +2,8 @@
 
 package ibm_mq
 
+import "github.com/wombatwisdom/components/framework/spec"
+
 // CommonMQConfig contains shared configuration for IBM MQ connections
 type CommonMQConfig struct {
 	// The IBM MQ Queue Manager name
@@ -53,4 +55,65 @@ type TLSConfig struct {
 
 	// Require FIPS 140-2 compliant algorithms
 	FipsRequired bool `json:"fips_required,omitempty" yaml:"fips_required,omitempty"`
+}
+
+// InputConfig defines configuration for IBM MQ input
+type InputConfig struct {
+	CommonMQConfig
+
+	// The IBM MQ queue name to read messages from
+	QueueName string `json:"queue_name" yaml:"queue_name"`
+
+	// Number of parallel workers for processing messages (default: 1)
+	NumWorkers int `json:"num_workers" yaml:"num_workers"`
+
+	// Maximum number of messages to batch together (default: 1)
+	BatchSize int `json:"batch_size" yaml:"batch_size"`
+
+	// Poll interval when queue is empty
+	PollInterval string `json:"poll_interval" yaml:"poll_interval"`
+
+	NumThreads int `json:"num_threads" yaml:"num_threads"`
+
+	WaitTime string `json:"wait_time" yaml:"wait_time"`
+
+	BatchCount int `json:"batch_count" yaml:"batch_count"`
+}
+
+// OutputConfig defines configuration for IBM MQ output
+type OutputConfig struct {
+	CommonMQConfig
+
+	// An expression to dynamically determine the queue name based on message content
+	// If set, this overrides the static queue_name for each message
+	QueueExpr spec.Expression `json:"queue_expr,omitempty" yaml:"queue_expr,omitempty"`
+
+	// Number of parallel queue connections to use (default: 1)
+	NumThreads int `json:"num_threads" yaml:"num_threads"`
+
+	// Metadata configuration for filtering message headers
+	Metadata *MetadataConfig `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+
+	// The format of the message data (e.g., "MQSTR" for string, "MQHRF2" for RFH2 headers)
+	// Default: "MQSTR"
+	Format string `json:"format,omitempty" yaml:"format,omitempty"`
+
+	// The Coded Character Set Identifier for the message
+	// Common values: "1208" (UTF-8), "819" (ISO-8859-1)
+	// Default: "1208"
+	Ccsid string `json:"ccsid,omitempty" yaml:"ccsid,omitempty"`
+
+	// The encoding of numeric data in the message
+	// Common values: "546" (Linux/Windows little-endian), "273" (big-endian)
+	// Default: "546"
+	Encoding string `json:"encoding,omitempty" yaml:"encoding,omitempty"`
+}
+
+// MetadataConfig defines metadata filtering options
+type MetadataConfig struct {
+	// Patterns to match metadata fields
+	Patterns []string `json:"patterns" yaml:"patterns"`
+
+	// If true, exclude matching patterns; if false, include only matching patterns
+	Invert bool `json:"invert" yaml:"invert"`
 }
