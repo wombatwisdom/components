@@ -10,9 +10,6 @@ import (
 type OutputConfig struct {
 	CommonMQConfig
 
-	// The IBM MQ queue name to write messages to
-	QueueName string `json:"queue_name" yaml:"queue_name"`
-
 	// An expression to dynamically determine the queue name based on message content
 	// If set, this overrides the static queue_name for each message
 	QueueExpr spec.Expression `json:"queue_expr,omitempty" yaml:"queue_expr,omitempty"`

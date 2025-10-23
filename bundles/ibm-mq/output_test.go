@@ -21,7 +21,7 @@ var _ = Describe("Output", func() {
 		var err error
 		ctx = test.NewMockComponentContext()
 
-		queueExpr, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+		queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
 		Expect(err).ToNot(HaveOccurred())
 
 		cfg := ibm_mq.OutputConfig{
@@ -31,8 +31,7 @@ var _ = Describe("Output", func() {
 				UserId:           "app",      // testcontainer default
 				Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 			},
-			QueueName: "DEV.QUEUE.1", // testcontainer default developer queue
-			QueueExpr: queueExpr,
+			QueueExpr: queueName,
 		}
 
 		output, _ = ibm_mq.NewOutput(env, cfg)
@@ -165,6 +164,9 @@ var _ = Describe("Output", func() {
 		})
 
 		It("should include metadata that matches filter patterns", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			// Configure filter to only include mq_ prefixed metadata
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
@@ -173,7 +175,7 @@ var _ = Describe("Output", func() {
 					UserId:           "app",
 					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 				Metadata: &ibm_mq.MetadataConfig{
 					Patterns: []string{"^mq_.*"}, // Only include mq_ prefixed metadata
 					Invert:   false,
@@ -181,7 +183,7 @@ var _ = Describe("Output", func() {
 			}
 
 			filteredOutput, _ := ibm_mq.NewOutput(env, cfg)
-			err := filteredOutput.Init(ctx)
+			err = filteredOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer filteredOutput.Close(ctx)
 
@@ -239,6 +241,9 @@ var _ = Describe("Output", func() {
 		})
 
 		It("should exclude metadata that doesn't match filter patterns", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			// Configure filter to only include custom_ prefixed metadata
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
@@ -247,7 +252,7 @@ var _ = Describe("Output", func() {
 					UserId:           "app",
 					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 				Metadata: &ibm_mq.MetadataConfig{
 					Patterns: []string{"^custom_.*"}, // Only include custom_ prefixed metadata
 					Invert:   false,
@@ -255,7 +260,7 @@ var _ = Describe("Output", func() {
 			}
 
 			filteredOutput, _ := ibm_mq.NewOutput(env, cfg)
-			err := filteredOutput.Init(ctx)
+			err = filteredOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer filteredOutput.Close(ctx)
 
@@ -314,6 +319,9 @@ var _ = Describe("Output", func() {
 		})
 
 		It("should apply message format configuration", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			// Test with MQSTR format
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
@@ -322,12 +330,12 @@ var _ = Describe("Output", func() {
 					UserId:           "app",
 					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 				Format:    "MQSTR",
 			}
 
 			formattedOutput, _ := ibm_mq.NewOutput(env, cfg)
-			err := formattedOutput.Init(ctx)
+			err = formattedOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer formattedOutput.Close(ctx)
 
@@ -384,6 +392,8 @@ var _ = Describe("Output", func() {
 		})
 
 		It("should apply CCSID configuration", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
 			// Test with ISO-8859-1 CCSID (non-default value)
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
@@ -392,12 +402,12 @@ var _ = Describe("Output", func() {
 					UserId:           "app",
 					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 				Ccsid:     "819", // ISO-8859-1 (non-default to ensure we're actually setting it)
 			}
 
 			ccsidOutput, _ := ibm_mq.NewOutput(env, cfg)
-			err := ccsidOutput.Init(ctx)
+			err = ccsidOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer ccsidOutput.Close(ctx)
 
@@ -453,6 +463,9 @@ var _ = Describe("Output", func() {
 		})
 
 		It("should apply encoding configuration", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			// Test with big-endian encoding (non-default value)
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
@@ -461,12 +474,12 @@ var _ = Describe("Output", func() {
 					UserId:           "app",
 					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 				Encoding:  "273", // Big-endian (non-default to ensure we're actually setting it)
 			}
 
 			encodingOutput, _ := ibm_mq.NewOutput(env, cfg)
-			err := encodingOutput.Init(ctx)
+			err = encodingOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer encodingOutput.Close(ctx)
 
@@ -522,6 +535,9 @@ var _ = Describe("Output", func() {
 		})
 
 		It("should use defaults when format/encoding not specified", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			// Create output without format/encoding configuration
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
@@ -530,11 +546,11 @@ var _ = Describe("Output", func() {
 					UserId:           "app",
 					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 			}
 
 			defaultOutput, _ := ibm_mq.NewOutput(env, cfg)
-			err := defaultOutput.Init(ctx)
+			err = defaultOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer defaultOutput.Close(ctx)
 
@@ -595,6 +611,9 @@ var _ = Describe("Output", func() {
 
 	Context("when using TLS configuration", func() {
 		It("should fail to connect with TLS to non-existent TLS channel", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
 					QueueManagerName: "QM1",
@@ -608,13 +627,13 @@ var _ = Describe("Output", func() {
 						CertificateLabel:      "ibmwebspheremqapp",
 					},
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 			}
 			tlsOutput, _ := ibm_mq.NewOutput(env, cfg)
 
 			// This should fail because SYSTEM.TLS.SVRCONN doesn't exist
 			// and the key repository likely doesn't exist either
-			err := tlsOutput.Init(ctx)
+			err = tlsOutput.Init(ctx)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to connect"))
 
@@ -622,6 +641,9 @@ var _ = Describe("Output", func() {
 		})
 
 		It("should work without TLS when disabled", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
 					QueueManagerName: "QM1",
@@ -633,17 +655,20 @@ var _ = Describe("Output", func() {
 						Enabled: false,
 					},
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 			}
 			nonTlsOutput, _ := ibm_mq.NewOutput(env, cfg)
 
-			err := nonTlsOutput.Init(ctx)
+			err = nonTlsOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
 			nonTlsOutput.Close(ctx)
 		})
 
 		It("should handle nil TLS config as disabled", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
 					QueueManagerName: "QM1",
@@ -653,11 +678,11 @@ var _ = Describe("Output", func() {
 					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 					TLS:              nil,
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 			}
 			nilTlsOutput, _ := ibm_mq.NewOutput(env, cfg)
 
-			err := nilTlsOutput.Init(ctx)
+			err = nilTlsOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
 			nilTlsOutput.Close(ctx)
@@ -665,6 +690,9 @@ var _ = Describe("Output", func() {
 
 		It("should apply cipher spec when TLS is enabled", func() {
 			Skip("Cannot setup client with gskit for client cert handling.")
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
 					QueueManagerName: "QM1",
@@ -676,8 +704,7 @@ var _ = Describe("Output", func() {
 						KeyRepository: "/opt/mqm/ssl/key",
 					},
 				},
-				QueueName: "DEV.QUEUE.1",
-			}
+				QueueExpr: queueName}
 
 			tlsOutput, _ := ibm_mq.NewOutput(env, cfg)
 
@@ -688,6 +715,9 @@ var _ = Describe("Output", func() {
 
 	Context("when using transactional writes", func() {
 		It("should rollback all messages on batch failure", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
 					QueueManagerName: "QM1",
@@ -695,11 +725,11 @@ var _ = Describe("Output", func() {
 					UserId:           "app",
 					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 			}
 			transactionalOutput, _ := ibm_mq.NewOutput(env, cfg)
 
-			err := transactionalOutput.Init(ctx)
+			err = transactionalOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer transactionalOutput.Close(ctx)
 
@@ -748,6 +778,9 @@ var _ = Describe("Output", func() {
 		})
 
 		It("should commit messages only after successful batch write", func() {
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
 			cfg := ibm_mq.OutputConfig{
 				CommonMQConfig: ibm_mq.CommonMQConfig{
 					QueueManagerName: "QM1",
@@ -755,11 +788,11 @@ var _ = Describe("Output", func() {
 					UserId:           "app",
 					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
 				},
-				QueueName: "DEV.QUEUE.1",
+				QueueExpr: queueName,
 			}
 			transactionalOutput, _ := ibm_mq.NewOutput(env, cfg)
 
-			err := transactionalOutput.Init(ctx)
+			err = transactionalOutput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			defer transactionalOutput.Close(ctx)
 

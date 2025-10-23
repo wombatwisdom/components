@@ -20,6 +20,9 @@ var _ = Describe("Roundtrip", func() {
 		env := test.TestEnvironment()
 
 		// Create output
+		queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+		Expect(err).ToNot(HaveOccurred())
+
 		output, _ = ibm_mq.NewOutput(env, ibm_mq.OutputConfig{
 			CommonMQConfig: ibm_mq.CommonMQConfig{
 				QueueManagerName: "QM1",
@@ -27,10 +30,10 @@ var _ = Describe("Roundtrip", func() {
 				UserId:           "app",      // testcontainer default
 				Password:         "passw0rd", // testcontainer default
 			},
-			QueueName: "DEV.QUEUE.1",
+			QueueExpr: queueName,
 		})
 
-		err := output.Init(ctx)
+		err = output.Init(ctx)
 		Expect(err).ToNot(HaveOccurred())
 
 		// Create input

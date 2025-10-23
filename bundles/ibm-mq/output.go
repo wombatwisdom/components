@@ -238,15 +238,11 @@ func (o *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
 }
 
 func (o *Output) WriteMessage(ctx spec.ComponentContext, message spec.Message) error {
-	// Determine queue name - use expression if set, otherwise static name
-	queueName := o.cfg.QueueName
-	if o.cfg.QueueExpr != nil {
-		exprCtx := spec.MessageExpressionContext(message)
-		var err error
-		queueName, err = o.cfg.QueueExpr.Eval(exprCtx)
-		if err != nil {
-			return fmt.Errorf("queue_expr: %w", err)
-		}
+	exprCtx := spec.MessageExpressionContext(message)
+	queueName, err := o.cfg.QueueExpr.Eval(exprCtx)
+
+	if err != nil {
+		return fmt.Errorf("topic interpolation error: %w", err)
 	}
 
 	// Get or open the queue
