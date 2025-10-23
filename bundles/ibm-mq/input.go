@@ -224,4 +224,3 @@ func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 
 	return batch, ackFn, nil
 }
-
