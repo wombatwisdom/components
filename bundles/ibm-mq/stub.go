@@ -22,13 +22,12 @@ type CommonMQConfig struct {
 // OutputConfig stub for non-mqclient builds
 type OutputConfig struct {
 	CommonMQConfig
-	QueueName  string
-	QueueExpr  spec.Expression
-	NumThreads int
-	Metadata   *MetadataConfig
-	Format     string
-	Ccsid      string
-	Encoding   string
+	QueueName string
+	QueueExpr spec.Expression
+	Metadata  *MetadataConfig
+	Format    string
+	Ccsid     string
+	Encoding  string
 }
 
 // MetadataConfig stub for non-mqclient builds
@@ -40,13 +39,7 @@ type MetadataConfig struct {
 // InputConfig stub for non-mqclient builds
 type InputConfig struct {
 	CommonMQConfig
-	QueueName    string
-	NumWorkers   int
-	BatchSize    int
-	PollInterval string
-	NumThreads   int
-	WaitTime     string
-	BatchCount   int
+	QueueName string
 }
 
 // SystemConfig stub for non-mqclient builds

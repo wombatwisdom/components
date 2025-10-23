@@ -63,33 +63,13 @@ type InputConfig struct {
 
 	// The IBM MQ queue name to read messages from
 	QueueName string `json:"queue_name" yaml:"queue_name"`
-
-	// Number of parallel workers for processing messages (default: 1)
-	NumWorkers int `json:"num_workers" yaml:"num_workers"`
-
-	// Maximum number of messages to batch together (default: 1)
-	BatchSize int `json:"batch_size" yaml:"batch_size"`
-
-	// Poll interval when queue is empty
-	PollInterval string `json:"poll_interval" yaml:"poll_interval"`
-
-	NumThreads int `json:"num_threads" yaml:"num_threads"`
-
-	WaitTime string `json:"wait_time" yaml:"wait_time"`
-
-	BatchCount int `json:"batch_count" yaml:"batch_count"`
 }
 
 // OutputConfig defines configuration for IBM MQ output
 type OutputConfig struct {
 	CommonMQConfig
 
-	// An expression to dynamically determine the queue name based on message content
-	// If set, this overrides the static queue_name for each message
 	QueueExpr spec.Expression `json:"queue_expr,omitempty" yaml:"queue_expr,omitempty"`
-
-	// Number of parallel queue connections to use (default: 1)
-	NumThreads int `json:"num_threads" yaml:"num_threads"`
 
 	// Metadata configuration for filtering message headers
 	Metadata *MetadataConfig `json:"metadata,omitempty" yaml:"metadata,omitempty"`
