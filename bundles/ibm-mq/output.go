@@ -52,9 +52,15 @@ type Output struct {
 	qmgr        ibmmq.MQQueueManager
 	queues      map[string]ibmmq.MQObject
 	queuesMutex sync.RWMutex
+
+	initialized bool
 }
 
 func (o *Output) Init(ctx spec.ComponentContext) error {
+	if o.initialized {
+		return spec.ErrAlreadyConnected
+	}
+
 	// Create connection to IBM MQ
 	cno := ibmmq.NewMQCNO()
 	cd := ibmmq.NewMQCD()
@@ -148,6 +154,7 @@ func (o *Output) Init(ctx spec.ComponentContext) error {
 
 	// Initialize queue cache
 	o.queues = make(map[string]ibmmq.MQObject)
+	o.initialized = true
 
 	return nil
 }
@@ -189,6 +196,10 @@ func (o *Output) getOrOpenQueue(queueName string) (ibmmq.MQObject, error) {
 }
 
 func (o *Output) Close(ctx spec.ComponentContext) error {
+	if !o.initialized {
+		return nil
+	}
+
 	// Close all cached queues
 	for queueName, queue := range o.queues {
 		if err := queue.Close(0); err != nil {
@@ -203,10 +214,15 @@ func (o *Output) Close(ctx spec.ComponentContext) error {
 		o.env.Errorf("Failed to disconnect from queue manager: %v", err)
 	}
 
+	o.initialized = false
 	return nil
 }
 
 func (o *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
+	if !o.initialized {
+		return spec.ErrNotConnected
+	}
+
 	for idx, message := range batch.Messages() {
 		if err := o.WriteMessage(ctx, message); err != nil {
 			if rollbackErr := o.qmgr.Back(); rollbackErr != nil {
