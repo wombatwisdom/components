@@ -18,7 +18,7 @@ var _ = Describe("Input", func() {
 	BeforeEach(func() {
 		ctx = test.NewMockComponentContext()
 
-		input = ibm_mq.NewInput(test.TestEnvironment(), ibm_mq.InputConfig{
+		input, _ = ibm_mq.NewInput(test.TestEnvironment(), ibm_mq.InputConfig{
 			CommonMQConfig: ibm_mq.CommonMQConfig{
 				QueueManagerName: "QM1",
 				ConnectionName:   "",         // fallback to MQSERVER env var
@@ -114,7 +114,7 @@ var _ = Describe("Input", func() {
 				},
 				QueueName: "DEV.QUEUE.1",
 			}
-			tlsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+			tlsInput, _ := ibm_mq.NewInput(test.TestEnvironment(), cfg)
 
 			err := tlsInput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -136,7 +136,7 @@ var _ = Describe("Input", func() {
 				},
 				QueueName: "DEV.QUEUE.1",
 			}
-			nonTlsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+			nonTlsInput, _ := ibm_mq.NewInput(test.TestEnvironment(), cfg)
 
 			err := nonTlsInput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -156,7 +156,7 @@ var _ = Describe("Input", func() {
 				},
 				QueueName: "DEV.QUEUE.1",
 			}
-			nilTlsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+			nilTlsInput, _ := ibm_mq.NewInput(test.TestEnvironment(), cfg)
 
 			err := nilTlsInput.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -181,7 +181,7 @@ var _ = Describe("Input", func() {
 				QueueName: "DEV.QUEUE.1",
 			}
 
-			tlsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+			tlsInput, _ := ibm_mq.NewInput(test.TestEnvironment(), cfg)
 			// Note: This will fail to connect without a proper TLS server,
 			_ = tlsInput.Init(ctx)
 
@@ -207,7 +207,7 @@ var _ = Describe("Input", func() {
 				QueueName: "DEV.QUEUE.1",
 			}
 
-			fipsInput := ibm_mq.NewInput(test.TestEnvironment(), cfg)
+			fipsInput, _ := ibm_mq.NewInput(test.TestEnvironment(), cfg)
 
 			_ = fipsInput.Init(ctx)
 

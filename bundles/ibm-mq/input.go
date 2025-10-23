@@ -39,13 +39,18 @@ type Input struct {
 	env spec.Environment
 	cfg InputConfig
 
-	qmgr        ibmmq.MQQueueManager
-	qObject     ibmmq.MQObject
-	mutex       sync.Mutex
+	qmgr    ibmmq.MQQueueManager
+	qObject ibmmq.MQObject
+	mqLock  sync.Mutex
+
 	initialized bool
 }
 
 func (i *Input) Init(ctx spec.ComponentContext) error {
+	if i.initialized {
+		return spec.ErrAlreadyConnected
+	}
+
 	cno := ibmmq.NewMQCNO()
 	cd := ibmmq.NewMQCD()
 
@@ -148,6 +153,12 @@ func (i *Input) Close(ctx spec.ComponentContext) error {
 		return nil
 	}
 
+	i.mqLock.Lock()
+	if err := i.qmgr.Back(); err != nil {
+		i.env.Errorf("Failed to rollback transaction: %v", err)
+	}
+	i.mqLock.Unlock()
+
 	if err := i.qObject.Close(0); err != nil {
 		i.env.Errorf("Failed to close queue: %v", err)
 	}
@@ -161,23 +172,24 @@ func (i *Input) Close(ctx spec.ComponentContext) error {
 }
 
 func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallback, error) {
-	i.mutex.Lock()
-	defer i.mutex.Unlock()
+	i.mqLock.Lock()
+	defer i.mqLock.Unlock()
 
-	// Create MQMD and MQGMO structures
+	if !i.initialized {
+		return nil, nil, spec.ErrNotConnected
+	}
+
 	mqmd := ibmmq.NewMQMD()
 	gmo := ibmmq.NewMQGMO()
 	gmo.Options = ibmmq.MQGMO_WAIT + ibmmq.MQGMO_SYNCPOINT + ibmmq.MQGMO_CONVERT
-	gmo.WaitInterval = 5000 // 5 seconds wait
+	gmo.WaitInterval = 5000
 
-	// Read message
-	buffer := make([]byte, 32768) // 32KB buffer
+	buffer := make([]byte, 32768)
 	datalen, err := i.qObject.Get(mqmd, gmo, buffer)
 
 	if err != nil {
 		var mqret *ibmmq.MQReturn
 		if errors.As(err, &mqret) {
-			// No message available is not an error
 			if mqret.MQRC == ibmmq.MQRC_NO_MSG_AVAILABLE {
 				return nil, nil, spec.ErrNoData
 			}
@@ -185,11 +197,8 @@ func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 		return nil, nil, fmt.Errorf("failed to get message from queue: %w", err)
 	}
 
-	// Create message and add to batch
 	msg := ctx.NewMessage()
 	msg.SetRaw(buffer[:datalen])
-
-	// Add MQ-specific metadata
 	msg.SetMetadata("mq_queue", i.cfg.QueueName)
 	msg.SetMetadata("mq_message_id", string(mqmd.MsgId))
 	msg.SetMetadata("mq_correlation_id", string(mqmd.CorrelId))
@@ -199,19 +208,20 @@ func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 
 	batch := ctx.NewBatch(msg)
 
-	// Create acknowledgment function
-	ackFn := func(ctx context.Context, ackErr error) error {
-		i.mutex.Lock()
-		defer i.mutex.Unlock()
+	ackFn := func(ackCtx context.Context, ackErr error) error {
+		i.mqLock.Lock()
+		defer i.mqLock.Unlock()
+
+		if ackCtx.Err() != nil || ctx.Context().Err() != nil {
+			return i.qmgr.Back()
+		}
 
 		if ackErr != nil {
-			// Rollback transaction
 			return i.qmgr.Back()
-		} else {
-			// Commit transaction
-			return i.qmgr.Cmit()
 		}
+		return i.qmgr.Cmit()
 	}
 
 	return batch, ackFn, nil
 }
+

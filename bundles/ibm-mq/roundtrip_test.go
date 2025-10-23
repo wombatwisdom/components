@@ -20,7 +20,7 @@ var _ = Describe("Roundtrip", func() {
 		env := test.TestEnvironment()
 
 		// Create output
-		output = ibm_mq.NewOutput(env, ibm_mq.OutputConfig{
+		output, _ = ibm_mq.NewOutput(env, ibm_mq.OutputConfig{
 			CommonMQConfig: ibm_mq.CommonMQConfig{
 				QueueManagerName: "QM1",
 				ConnectionName:   "",         // fallback to MQSERVER env var
@@ -34,7 +34,7 @@ var _ = Describe("Roundtrip", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		// Create input
-		input = ibm_mq.NewInput(env, ibm_mq.InputConfig{
+		input, _ = ibm_mq.NewInput(env, ibm_mq.InputConfig{
 			CommonMQConfig: ibm_mq.CommonMQConfig{
 				QueueManagerName: "QM1",
 				ConnectionName:   "",         // fallback to MQSERVER env var
