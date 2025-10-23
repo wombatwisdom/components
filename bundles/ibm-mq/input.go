@@ -27,14 +27,6 @@ func NewInput(env spec.Environment, config InputConfig) (*Input, error) {
 }
 
 // Input receives messages from an IBM MQ queue.
-//
-// The MQ input creates one or more queue connections to read messages
-// from the specified queue. It supports batching to improve throughput
-// and can handle multiple parallel connections for high-volume queues.
-//
-// Messages are read transactionally to ensure exactly-once processing
-// semantics where possible. Failed messages can be automatically retried
-// or sent to a backout queue if configured on the queue manager.
 type Input struct {
 	env spec.Environment
 	cfg InputConfig

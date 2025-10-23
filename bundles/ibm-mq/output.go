@@ -25,24 +25,7 @@ func NewOutput(env spec.Environment, cfg OutputConfig) (*Output, error) {
 	}, nil
 }
 
-//// NewOutputFromConfig creates an output from a spec.Config interface
-//func NewOutputFromConfig(sys spec.System, config spec.Config) (*Output, error) {
-//	var cfg OutputConfig
-//	if err := config.Decode(&cfg); err != nil {
-//		return nil, err
-//	}
-//	return NewOutput(sys, cfg), nil
-//}
-
 // Output sends messages to an IBM MQ queue.
-//
-// The MQ output creates one or more queue connections to write messages
-// to the specified queue. It supports multiple parallel connections for
-// high-volume outputs and handles message formatting including CCSID,
-// encoding, and format settings.
-//
-// Messages are written transactionally to ensure reliable delivery.
-// The output can be configured to include metadata as MQ message properties.
 type Output struct {
 	env spec.Environment
 	cfg OutputConfig
@@ -65,7 +48,6 @@ func (o *Output) Init(ctx spec.ComponentContext) error {
 	cno := ibmmq.NewMQCNO()
 	cd := ibmmq.NewMQCD()
 
-	// Fill in required fields in the MQCD channel definition structure
 	channelName := o.cfg.ChannelName
 	connectionName := o.cfg.ConnectionName
 
@@ -245,13 +227,11 @@ func (o *Output) WriteMessage(ctx spec.ComponentContext, message spec.Message) e
 		return fmt.Errorf("topic interpolation error: %w", err)
 	}
 
-	// Get or open the queue
 	queue, err := o.getOrOpenQueue(queueName)
 	if err != nil {
 		return err
 	}
 
-	// Get message data
 	data, err := message.Raw()
 	if err != nil {
 		return fmt.Errorf("failed to get message data: %w", err)
@@ -278,14 +258,12 @@ func (o *Output) createMQMD(message spec.Message) (*ibmmq.MQMD, bool) {
 	mqmd := ibmmq.NewMQMD()
 	hasCorrelId := false
 
-	// Set format
 	if o.cfg.Format != "" {
 		mqmd.Format = o.cfg.Format
 	} else {
 		mqmd.Format = "MQSTR"
 	}
 
-	// Set CCSID
 	if o.cfg.Ccsid != "" {
 		if ccsidInt, err := strconv.Atoi(o.cfg.Ccsid); err == nil {
 			mqmd.CodedCharSetId = int32(ccsidInt)
@@ -298,7 +276,6 @@ func (o *Output) createMQMD(message spec.Message) (*ibmmq.MQMD, bool) {
 		mqmd.CodedCharSetId = 1208 // UTF-8 default
 	}
 
-	// Set encoding
 	if o.cfg.Encoding != "" {
 		if encodingInt, err := strconv.Atoi(o.cfg.Encoding); err == nil {
 			mqmd.Encoding = int32(encodingInt)
