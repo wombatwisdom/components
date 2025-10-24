@@ -4,11 +4,6 @@ silent: true
 
 vars:
   COMPONENT_NAME: "ibm_mq"
-  # Schema mappings - more maintainable format
-  SCHEMA_MAPPINGS_LIST:
-    - "dev.wombat.component.ibm_mq.system.config=./system_config.go"
-    - "dev.wombat.component.ibm_mq.input.config=./input_config.go"
-    - "dev.wombat.component.ibm_mq.output.config=./output_config.go"
   SHOW_PROGRESS: "true"
 
 includes:
@@ -16,29 +11,46 @@ includes:
     taskfile: ../_common/Taskfile.yml
 
 tasks:
-  generate:
-    desc: Generate code from schemas
-    cmds:
-      - |
-        if [ {{len .SCHEMA_MAPPINGS_LIST}} -gt 0 ] && [ -n "{{.COMPONENT_NAME}}" ]; then
-          go-jsonschema --struct-name-from-title \
-            --package {{.COMPONENT_NAME}} \
-            {{range .SCHEMA_MAPPINGS_LIST}}--schema-output={{.}} {{end}}\
-            *.schema.yaml > /dev/null
-        fi
-
   validate:
     desc: Validate the component
     cmds:
-      - task: generate
       - task: common:validate
         vars:
           COMPONENT_NAME: "{{.COMPONENT_NAME}}"
-  
+
+  # This requires CGO_LDFLAGS, CGO_CFLAGS and MQ_INSTALLATION_PATH to be configured
+  # See readme
   test:
     desc: Run component tests
     cmds:
-      - task: common:test
+      - |
+        if [ -z "${CGO_LDFLAGS}" ]; then
+          echo "CGO_LDFLAGS is not set. See readme on how to configure IBM redistributable"
+          exit 1
+        else
+          echo "CGO_LDFLAGS is set to: ${CGO_LDFLAGS}"
+        fi
+        
+        if [ -z "${CGO_CFLAGS}" ]; then
+          echo "CGO_CFLAGS is not set. See readme on how to configure IBM redistributable"
+          exit 1
+        else
+          echo "CGO_CFLAGS is set to: ${CGO_CFLAGS}"
+        fi
+        go test -tags mqclient ./ -v
+
+  # This should run without extra config
+  test_container:
+    desc: Run IBM MQ tests in container with MQ libraries
+    dir: ../..
+    cmds:
+      - |
+        docker build -f bundles/ibm-mq/Dockerfile -t components-mq-test . && \
+        docker run --rm \
+          --privileged \
+          -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          components-mq-test
 
   test:unit:
     desc: Run unit tests only
@@ -63,7 +75,6 @@ tasks:
   build:
     desc: Build the component
     cmds:
-      - task: generate
       - task: common:build
         vars:
           COMPONENT_NAME: "{{.COMPONENT_NAME}}"

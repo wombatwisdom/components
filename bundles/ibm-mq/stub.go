@@ -9,6 +9,58 @@ import (
 	"github.com/wombatwisdom/components/framework/spec"
 )
 
+// CommonMQConfig stub for non-mqclient builds
+type CommonMQConfig struct {
+	QueueManagerName string
+	ChannelName      string
+	ConnectionName   string
+	UserId           string
+	Password         string
+	ApplicationName  string
+}
+
+// OutputConfig stub for non-mqclient builds
+type OutputConfig struct {
+	CommonMQConfig
+	QueueName string
+	QueueExpr spec.Expression
+	Metadata  *MetadataConfig
+	Format    string
+	Ccsid     string
+	Encoding  string
+}
+
+// MetadataConfig stub for non-mqclient builds
+type MetadataConfig struct {
+	Patterns []string
+	Invert   bool
+}
+
+// InputConfig stub for non-mqclient builds
+type InputConfig struct {
+	CommonMQConfig
+	QueueName     string
+	BatchSize     int
+	BatchWaitTime string
+}
+
+// SystemConfig stub for non-mqclient builds
+type SystemConfig struct {
+	CommonMQConfig
+	TLS *TLSConfig
+}
+
+// TLSConfig stub for non-mqclient builds
+type TLSConfig struct {
+	Enabled               bool
+	CipherSpec            string
+	KeyRepository         string
+	KeyRepositoryPassword string
+	CertificateLabel      string
+	SSLPeerName           string
+	FipsRequired          bool
+}
+
 // Stub implementations when IBM MQ client libraries are not available
 // This allows the component to compile for development and testing
 
@@ -39,16 +91,12 @@ func (s *System) Close(ctx context.Context) error {
 
 // Input stub implementation
 type Input struct {
-	_ spec.System
-	_ InputConfig
+	env spec.Environment
+	cfg InputConfig
 }
 
-func NewInput(sys spec.System, rawConfig spec.Config) (*Input, error) {
-	return nil, fmt.Errorf("IBM MQ client libraries not available - build with -tags mqclient")
-}
-
-func NewInputFromConfig(sys spec.System, config spec.Config) (*Input, error) {
-	return nil, fmt.Errorf("IBM MQ client libraries not available - build with -tags mqclient")
+func NewInput(env spec.Environment, config InputConfig) (*Input, error) {
+	return &Input{env: env, cfg: config}, fmt.Errorf("IBM MQ client libraries not available - build with -tags mqclient")
 }
 
 func (i *Input) Init(ctx spec.ComponentContext) error {
@@ -65,12 +113,12 @@ func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 
 // Output stub implementation
 type Output struct {
-	sys spec.System
+	env spec.Environment
 	cfg OutputConfig
 }
 
-func NewOutput(sys spec.System, cfg OutputConfig) *Output {
-	return &Output{sys: sys, cfg: cfg}
+func NewOutput(env spec.Environment, cfg OutputConfig) (*Output, error) {
+	return &Output{env: env, cfg: cfg}, fmt.Errorf("IBM MQ client libraries not available - build with -tags mqclient")
 }
 
 func NewOutputFromConfig(sys spec.System, config spec.Config) (*Output, error) {

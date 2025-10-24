@@ -4,9 +4,10 @@ package ibm_mq
 
 import (
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/ibm-messaging/mq-golang/v5/ibmmq"
 	"github.com/wombatwisdom/components/framework/spec"
@@ -17,61 +18,114 @@ const (
 )
 
 // NewOutput creates a new MQ output component
-func NewOutput(sys spec.System, cfg OutputConfig) *Output {
+func NewOutput(env spec.Environment, cfg OutputConfig) (*Output, error) {
 	return &Output{
-		sys: sys,
+		env: env,
 		cfg: cfg,
-	}
-}
-
-// NewOutputFromConfig creates an output from a spec.Config interface
-func NewOutputFromConfig(sys spec.System, config spec.Config) (*Output, error) {
-	var cfg OutputConfig
-	if err := config.Decode(&cfg); err != nil {
-		return nil, err
-	}
-	return NewOutput(sys, cfg), nil
+	}, nil
 }
 
 // Output sends messages to an IBM MQ queue.
-//
-// The MQ output creates one or more queue connections to write messages
-// to the specified queue. It supports multiple parallel connections for
-// high-volume outputs and handles message formatting including CCSID,
-// encoding, and format settings.
-//
-// Messages are written transactionally to ensure reliable delivery.
-// The output can be configured to include metadata as MQ message properties.
 type Output struct {
-	sys spec.System
+	env spec.Environment
 	cfg OutputConfig
 
-	queueName      spec.Expression
 	metadataFilter spec.MetadataFilter
 
-	queueConnections []*outputQueueConnection
-	connChan         chan *outputQueueConnection
-	shutdownOnce     sync.Once
-	shutdownChan     chan struct{}
-}
+	qmgr        ibmmq.MQQueueManager
+	queues      map[string]ibmmq.MQObject
+	queuesMutex sync.RWMutex
 
-type outputQueueConnection struct {
-	qmgr    *ibmmq.MQQueueManager
-	qObject ibmmq.MQObject
-	mutex   sync.Mutex
+	initialized bool
 }
 
 func (o *Output) Init(ctx spec.ComponentContext) error {
-	client, ok := o.sys.Client().(*ibmmq.MQQueueManager)
-	if !ok {
-		return fmt.Errorf("mq client is not of type *ibmmq.MQQueueManager")
+	if o.initialized {
+		return spec.ErrAlreadyConnected
 	}
 
-	// Parse queue name as expression (it might contain variables)
-	var err error
-	if o.queueName, err = ctx.ParseExpression(o.cfg.QueueName); err != nil {
-		return fmt.Errorf("queue_name: %w", err)
+	// Create connection to IBM MQ
+	cno := ibmmq.NewMQCNO()
+	cd := ibmmq.NewMQCD()
+
+	channelName := o.cfg.ChannelName
+	connectionName := o.cfg.ConnectionName
+
+	// If ConnectionName is empty, check for MQSERVER environment variable
+	// MQSERVER format: CHANNEL/TCP/HOST(PORT)
+	if connectionName == "" {
+		if mqserver := os.Getenv("MQSERVER"); mqserver != "" {
+			parts := strings.Split(mqserver, "/")
+			if len(parts) >= 3 {
+				channelName = parts[0]
+				connectionName = parts[2] // HOST(PORT) part
+			}
+		}
 	}
+
+	cd.ChannelName = channelName
+	cd.ConnectionName = connectionName
+
+	// Configure TLS if enabled
+	if o.cfg.TLS != nil && o.cfg.TLS.Enabled {
+		if o.cfg.TLS.CipherSpec != "" {
+			cd.SSLCipherSpec = o.cfg.TLS.CipherSpec
+		}
+
+		// Create SSL Configuration Options
+		sco := ibmmq.NewMQSCO()
+
+		if o.cfg.TLS.KeyRepository != "" {
+			sco.KeyRepository = o.cfg.TLS.KeyRepository
+		}
+
+		if o.cfg.TLS.KeyRepositoryPassword != "" {
+			sco.KeyRepoPassword = o.cfg.TLS.KeyRepositoryPassword
+		}
+
+		if o.cfg.TLS.CertificateLabel != "" {
+			sco.CertificateLabel = o.cfg.TLS.CertificateLabel
+		}
+
+		if o.cfg.TLS.FipsRequired {
+			sco.FipsRequired = true
+		}
+
+		cno.SSLConfig = sco
+
+		if o.cfg.TLS.SSLPeerName != "" {
+			cd.SSLPeerName = o.cfg.TLS.SSLPeerName
+		}
+	}
+
+	// Reference the CD structure from the CNO and indicate client connection
+	cno.ClientConn = cd
+	cno.Options = ibmmq.MQCNO_CLIENT_BINDING + ibmmq.MQCNO_RECONNECT + ibmmq.MQCNO_HANDLE_SHARE_BLOCK
+
+	hostname, _ := os.Hostname()
+	maxHostLen := 15
+	if len(hostname) > maxHostLen {
+		hostname = hostname[:maxHostLen]
+	}
+	cno.ApplName = fmt.Sprintf("WW MQ Output %s", hostname)
+
+	// Configure authentication if provided
+	if o.cfg.UserId != "" {
+		csp := ibmmq.NewMQCSP()
+		csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+		csp.UserId = o.cfg.UserId
+		if o.cfg.Password != "" {
+			csp.Password = o.cfg.Password
+		}
+		cno.SecurityParms = csp
+	}
+
+	// Connect to the queue manager
+	qmgr, err := ibmmq.Connx(o.cfg.QueueManagerName, cno)
+	if err != nil {
+		return fmt.Errorf("failed to connect to queue manager %s: %w", o.cfg.QueueManagerName, err)
+	}
+	o.qmgr = qmgr
 
 	// Setup metadata filter if configured
 	if o.cfg.Metadata != nil {
@@ -80,185 +134,201 @@ func (o *Output) Init(ctx spec.ComponentContext) error {
 		}
 	}
 
-	// Initialize channels
-	o.shutdownChan = make(chan struct{})
-	o.connChan = make(chan *outputQueueConnection, o.cfg.NumThreads)
-
-	// Create queue connections based on num_threads
-	o.queueConnections = make([]*outputQueueConnection, o.cfg.NumThreads)
-
-	for i := range o.queueConnections {
-		// Each thread gets its own queue manager connection and queue object
-		qmgr, ok := o.sys.Client().(*ibmmq.MQQueueManager)
-		if !ok {
-			return fmt.Errorf("failed to get queue manager for thread %d", i)
-		}
-
-		// Open the queue for output
-		mqod := ibmmq.NewMQOD()
-		mqod.ObjectType = ibmmq.MQOT_Q
-		mqod.ObjectName = o.cfg.QueueName
-
-		openOptions := ibmmq.MQOO_OUTPUT + ibmmq.MQOO_FAIL_IF_QUIESCING
-		qObject, err := qmgr.Open(mqod, openOptions)
-		if err != nil {
-			return fmt.Errorf("failed to open queue %s: %w", o.cfg.QueueName, err)
-		}
-
-		conn := &outputQueueConnection{
-			qmgr:    qmgr,
-			qObject: qObject,
-		}
-
-		o.queueConnections[i] = conn
-		// Make connection available in the channel
-		o.connChan <- conn
-	}
+	// Initialize queue cache
+	o.queues = make(map[string]ibmmq.MQObject)
+	o.initialized = true
 
 	return nil
 }
 
-func (o *Output) Close(ctx spec.ComponentContext) error {
-	o.shutdownOnce.Do(func() {
-		close(o.shutdownChan)
-	})
+func (o *Output) getOrOpenQueue(queueName string) (ibmmq.MQObject, error) {
+	// Try to get from cache with read lock
+	o.queuesMutex.RLock()
+	queue, exists := o.queues[queueName]
+	o.queuesMutex.RUnlock()
 
-	// Close all queue connections
-	for _, conn := range o.queueConnections {
-		if conn != nil {
-			if err := conn.qObject.Close(0); err != nil {
-				// Log error but continue cleanup
-				// Note: We should use a proper logger here
-			}
+	if exists {
+		return queue, nil
+	}
+
+	// Not in cache, need to open it
+	o.queuesMutex.Lock()
+	defer o.queuesMutex.Unlock()
+
+	// Double-check in case another goroutine added it
+	queue, exists = o.queues[queueName]
+	if exists {
+		return queue, nil
+	}
+
+	// Open the queue
+	mqod := ibmmq.NewMQOD()
+	mqod.ObjectType = ibmmq.MQOT_Q
+	mqod.ObjectName = queueName
+
+	openOptions := ibmmq.MQOO_OUTPUT + ibmmq.MQOO_FAIL_IF_QUIESCING
+	queue, err := (&o.qmgr).Open(mqod, openOptions)
+	if err != nil {
+		return ibmmq.MQObject{}, fmt.Errorf("failed to open queue %s: %w", queueName, err)
+	}
+
+	// Cache it
+	o.queues[queueName] = queue
+	return queue, nil
+}
+
+func (o *Output) Close(ctx spec.ComponentContext) error {
+	if !o.initialized {
+		return nil
+	}
+
+	// Close all cached queues
+	for queueName, queue := range o.queues {
+		if err := queue.Close(0); err != nil {
+			// Log error but continue cleanup
+			o.env.Errorf("Failed to close queue %s: %v", queueName, err)
 		}
 	}
 
+	// Disconnect from queue manager
+	if err := o.qmgr.Disc(); err != nil {
+		// Log error but continue cleanup
+		o.env.Errorf("Failed to disconnect from queue manager: %v", err)
+	}
+
+	o.initialized = false
 	return nil
 }
 
 func (o *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
+	if !o.initialized {
+		return spec.ErrNotConnected
+	}
+
 	for idx, message := range batch.Messages() {
 		if err := o.WriteMessage(ctx, message); err != nil {
+			if rollbackErr := o.qmgr.Back(); rollbackErr != nil {
+				o.env.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
 			return fmt.Errorf("batch #%d: %w", idx, err)
 		}
+	}
+	if err := o.qmgr.Cmit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	return nil
 }
 
 func (o *Output) WriteMessage(ctx spec.ComponentContext, message spec.Message) error {
-	// Get an available connection
-	var conn *outputQueueConnection
-	select {
-	case conn = <-o.connChan:
-	case <-o.shutdownChan:
-		return fmt.Errorf("output is shutting down")
-	case <-time.After(30 * time.Second):
-		return fmt.Errorf("timeout waiting for available connection")
-	}
+	exprCtx := spec.MessageExpressionContext(message)
+	queueName, err := o.cfg.QueueExpr.Eval(exprCtx)
 
-	// Ensure we return the connection to the pool
-	defer func() {
-		select {
-		case o.connChan <- conn:
-		case <-o.shutdownChan:
-		}
-	}()
-
-	conn.mutex.Lock()
-	defer conn.mutex.Unlock()
-
-	// Evaluate queue name (might be dynamic)
-	queueName, err := o.queueName.EvalString(spec.MessageExpressionContext(message))
 	if err != nil {
-		return fmt.Errorf("queue_name: %w", err)
+		return fmt.Errorf("topic interpolation error: %w", err)
 	}
 
-	// Get message data
+	queue, err := o.getOrOpenQueue(queueName)
+	if err != nil {
+		return err
+	}
+
 	data, err := message.Raw()
 	if err != nil {
 		return fmt.Errorf("failed to get message data: %w", err)
 	}
 
-	// Create MQMD and MQPMO structures
-	mqmd := o.createMQMD(message)
+	mqmd, hasCorrelId := o.createMQMD(message)
 	pmo := ibmmq.NewMQPMO()
-	pmo.Options = ibmmq.MQPMO_SYNCPOINT + ibmmq.MQPMO_NEW_MSG_ID + ibmmq.MQPMO_NEW_CORREL_ID
 
-	// Add message properties if metadata filter is configured
-	if o.metadataFilter != nil {
-		// TODO: Add message properties support when available in MQ Go client
-		// For now, we can add metadata to the MQMD structure where applicable
+	pmoOptions := ibmmq.MQPMO_SYNCPOINT + ibmmq.MQPMO_NEW_MSG_ID
+	if !hasCorrelId {
+		pmoOptions += ibmmq.MQPMO_NEW_CORREL_ID
 	}
+	pmo.Options = pmoOptions
 
-	// Put message to queue
-	err = conn.qObject.Put(mqmd, pmo, data)
+	err = queue.Put(mqmd, pmo, data)
 	if err != nil {
-		// Rollback transaction on error
-		conn.qmgr.Back()
 		return fmt.Errorf("failed to put message to queue %s: %w", queueName, err)
-	}
-
-	// Commit transaction
-	err = conn.qmgr.Cmit()
-	if err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil
 }
 
-func (o *Output) createMQMD(message spec.Message) *ibmmq.MQMD {
+func (o *Output) createMQMD(message spec.Message) (*ibmmq.MQMD, bool) {
 	mqmd := ibmmq.NewMQMD()
+	hasCorrelId := false
 
-	// Set format
-	if o.cfg.Format != nil {
-		mqmd.Format = *o.cfg.Format
+	if o.cfg.Format != "" {
+		mqmd.Format = o.cfg.Format
 	} else {
 		mqmd.Format = "MQSTR"
 	}
 
-	// Set CCSID
-	if o.cfg.Ccsid != nil {
-		if ccsidInt, err := strconv.Atoi(*o.cfg.Ccsid); err == nil {
+	if o.cfg.Ccsid != "" {
+		if ccsidInt, err := strconv.Atoi(o.cfg.Ccsid); err == nil {
 			mqmd.CodedCharSetId = int32(ccsidInt)
 		} else {
-			mqmd.CodedCharSetId = 1208 // UTF-8 default
+			// If parsing fails, use UTF-8 default
+			o.env.Warnf("Failed to parse CCSID '%s', using default 1208 (UTF-8): %v", o.cfg.Ccsid, err)
+			mqmd.CodedCharSetId = 1208
 		}
 	} else {
 		mqmd.CodedCharSetId = 1208 // UTF-8 default
 	}
 
-	// Set encoding
-	if o.cfg.Encoding != nil {
-		if encodingInt, err := strconv.Atoi(*o.cfg.Encoding); err == nil {
+	if o.cfg.Encoding != "" {
+		if encodingInt, err := strconv.Atoi(o.cfg.Encoding); err == nil {
 			mqmd.Encoding = int32(encodingInt)
 		} else {
-			mqmd.Encoding = 546 // default encoding
+			// If parsing fails, use little-endian default
+			o.env.Warnf("Failed to parse encoding '%s', using default 546 (little-endian): %v", o.cfg.Encoding, err)
+			mqmd.Encoding = 546
 		}
 	} else {
-		mqmd.Encoding = 546 // default encoding
+		mqmd.Encoding = 546 // default encoding (little-endian)
 	}
 
-	// Try to set priority from metadata
-	if priority, exists := message.Metadata()["mq_priority"]; exists {
-		if priorityInt, err := strconv.Atoi(fmt.Sprintf("%v", priority)); err == nil {
-			mqmd.Priority = int32(priorityInt)
+	// Apply metadata to MQMD if it passes the filter
+	metadataMap := make(map[string]any)
+	for key, value := range message.Metadata() {
+		metadataMap[key] = value
+	}
+
+	if o.shouldIncludeMetadata("mq_priority") {
+		if priority, exists := metadataMap["mq_priority"]; exists {
+			if priorityInt, err := strconv.Atoi(fmt.Sprintf("%v", priority)); err == nil {
+				mqmd.Priority = int32(priorityInt)
+			}
 		}
 	}
 
-	// Try to set persistence from metadata
-	if persistence, exists := message.Metadata()["mq_persistence"]; exists {
-		if persistenceInt, err := strconv.Atoi(fmt.Sprintf("%v", persistence)); err == nil {
-			mqmd.Persistence = int32(persistenceInt)
+	if o.shouldIncludeMetadata("mq_persistence") {
+		if persistence, exists := metadataMap["mq_persistence"]; exists {
+			if persistenceInt, err := strconv.Atoi(fmt.Sprintf("%v", persistence)); err == nil {
+				mqmd.Persistence = int32(persistenceInt)
+			}
 		}
 	}
 
-	// Try to set correlation ID from metadata
-	if correlId, exists := message.Metadata()["mq_correlation_id"]; exists {
-		if correlIdStr := fmt.Sprintf("%v", correlId); len(correlIdStr) <= 24 {
-			copy(mqmd.CorrelId[:], []byte(correlIdStr))
+	if o.shouldIncludeMetadata("mq_correlation_id") {
+		if correlId, exists := metadataMap["mq_correlation_id"]; exists {
+			if correlIdStr := fmt.Sprintf("%v", correlId); len(correlIdStr) <= 24 {
+				copy(mqmd.CorrelId[:], []byte(correlIdStr))
+				hasCorrelId = true
+			}
 		}
 	}
 
-	return mqmd
+	return mqmd, hasCorrelId
+}
+
+// shouldIncludeMetadata checks if a metadata key should be included based on the filter
+func (o *Output) shouldIncludeMetadata(key string) bool {
+	// If no filter is configured, include all metadata
+	if o.metadataFilter == nil {
+		return true
+	}
+
+	// Use the metadata filter to check if the key should be included
+	return o.metadataFilter.Include(key)
 }

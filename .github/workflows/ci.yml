@@ -53,6 +53,22 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-1.25.1-
 
+    - name: Cache IBM MQ Client
+      id: cache-mq
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/mqclient
+        key: ${{ runner.os }}-ibm-mq-9.4.1.0
+
+    - name: Download and setup IBM MQ Client
+      if: steps.cache-mq.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p ${{ runner.temp }}/mqclient
+        cd ${{ runner.temp }}/mqclient
+        wget https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist/9.4.1.0-IBM-MQC-Redist-LinuxX64.tar.gz
+        tar -xzf 9.4.1.0-IBM-MQC-Redist-LinuxX64.tar.gz
+        rm 9.4.1.0-IBM-MQC-Redist-LinuxX64.tar.gz
+
     - name: Install Task
       uses: arduino/setup-task@v2
       with:
@@ -65,11 +81,12 @@ jobs:
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
     - name: Run tests
-      run: task test
+      run: task test:all
       env:
         NATS_URL: nats://localhost:4222
         MQTT_URL: tcp://localhost:1883
-
+        CGO_CFLAGS: "-I${{ runner.temp }}/mqclient/inc"
+        CGO_LDFLAGS: "-L${{ runner.temp }}/mqclient/lib64 -Wl,-rpath=${{ runner.temp }}/mqclient/lib64"
     - name: Run tests with race detector
       run: task test:race
 

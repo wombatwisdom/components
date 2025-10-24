@@ -2,14 +2,6 @@ version: "3"
 
 silent: true
 
-vars:
-  COMPONENTS:
-    - "aws-eventbridge"
-    - "aws-s3"
-    - "ibm-mq"
-    - "mqtt"
-    - "nats"
-
 includes:
   aws-eventbridge:
     taskfile: ./aws-eventbridge/Taskfile.yml

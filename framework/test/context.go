@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"iter"
+	"regexp"
 
 	"github.com/wombatwisdom/components/framework/spec"
 )
@@ -45,7 +46,19 @@ func (m *mockComponentContext) Errorf(format string, args ...interface{}) {
 }
 
 func (m *mockComponentContext) BuildMetadataFilter(patterns []string, invert bool) (spec.MetadataFilter, error) {
-	return nil, nil // Mock implementation
+	regexes := make([]*regexp.Regexp, 0, len(patterns))
+	for _, pattern := range patterns {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return nil, err
+		}
+		regexes = append(regexes, re)
+	}
+
+	return &mockMetadataFilter{
+		patterns: regexes,
+		invert:   invert,
+	}, nil
 }
 
 func (m *mockComponentContext) NewBatch(msgs ...spec.Message) spec.Batch {
@@ -105,4 +118,25 @@ func (m *mockMessage) Metadata() iter.Seq2[string, any] {
 			}
 		}
 	}
+}
+
+// mockMetadataFilter implements spec.MetadataFilter for testing
+type mockMetadataFilter struct {
+	patterns []*regexp.Regexp
+	invert   bool
+}
+
+func (f *mockMetadataFilter) Include(key string) bool {
+	matched := false
+	for _, re := range f.patterns {
+		if re.MatchString(key) {
+			matched = true
+			break
+		}
+	}
+
+	if f.invert {
+		return !matched
+	}
+	return matched
 }
