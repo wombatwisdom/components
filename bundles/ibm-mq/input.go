@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ibm-messaging/mq-golang/v5/ibmmq"
 	"github.com/wombatwisdom/components/framework/spec"
@@ -171,35 +172,87 @@ func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 		return nil, nil, spec.ErrNotConnected
 	}
 
-	mqmd := ibmmq.NewMQMD()
-	gmo := ibmmq.NewMQGMO()
-	gmo.Options = ibmmq.MQGMO_WAIT + ibmmq.MQGMO_SYNCPOINT + ibmmq.MQGMO_CONVERT
-	gmo.WaitInterval = 5000
-
-	buffer := make([]byte, 32768)
-	datalen, err := i.qObject.Get(mqmd, gmo, buffer)
-
-	if err != nil {
-		var mqret *ibmmq.MQReturn
-		if errors.As(err, &mqret) {
-			if mqret.MQRC == ibmmq.MQRC_NO_MSG_AVAILABLE {
-				return nil, nil, spec.ErrNoData
-			}
-		}
-		return nil, nil, fmt.Errorf("failed to get message from queue: %w", err)
+	// Default batch size to 1 if not set
+	batchSize := i.cfg.BatchSize
+	if batchSize <= 0 {
+		batchSize = 1
 	}
 
-	msg := ctx.NewMessage()
-	msg.SetRaw(buffer[:datalen])
-	msg.SetMetadata("mq_queue", i.cfg.QueueName)
-	msg.SetMetadata("mq_message_id", string(mqmd.MsgId))
-	msg.SetMetadata("mq_correlation_id", string(mqmd.CorrelId))
-	msg.SetMetadata("mq_format", mqmd.Format)
-	msg.SetMetadata("mq_priority", fmt.Sprintf("%d", mqmd.Priority))
-	msg.SetMetadata("mq_persistence", fmt.Sprintf("%d", mqmd.Persistence))
+	// Parse batch wait time, default to 5 seconds
+	waitInterval := int32(5000) // milliseconds
+	if i.cfg.BatchWaitTime != "" {
+		if duration, err := time.ParseDuration(i.cfg.BatchWaitTime); err == nil {
+			waitInterval = int32(duration.Milliseconds())
+			if waitInterval <= 0 {
+				waitInterval = 5000
+			}
+		}
+	}
 
-	batch := ctx.NewBatch(msg)
+	// Collect messages for the batch
+	var messages []spec.Message
+	buffer := make([]byte, 32768)
 
+	for j := 0; j < batchSize; j++ {
+		mqmd := ibmmq.NewMQMD()
+		gmo := ibmmq.NewMQGMO()
+		gmo.Options = ibmmq.MQGMO_SYNCPOINT + ibmmq.MQGMO_CONVERT
+
+		// Only wait on first message, subsequent messages should be available immediately
+		if j == 0 {
+			gmo.Options |= ibmmq.MQGMO_WAIT
+			gmo.WaitInterval = waitInterval
+		} else {
+			// For subsequent messages, don't wait - return partial batch if no more messages
+			gmo.Options |= ibmmq.MQGMO_NO_WAIT
+		}
+
+		datalen, err := i.qObject.Get(mqmd, gmo, buffer)
+
+		if err != nil {
+			var mqret *ibmmq.MQReturn
+			if errors.As(err, &mqret) {
+				if mqret.MQRC == ibmmq.MQRC_NO_MSG_AVAILABLE {
+					// If this is the first message and no messages available, return error
+					if j == 0 {
+						return nil, nil, spec.ErrNoData
+					}
+					// Otherwise return partial batch
+					break
+				}
+			}
+			// Any other error, rollback and return
+			if j > 0 {
+				// We have partial messages, need to rollback
+				if rollbackErr := i.qmgr.Back(); rollbackErr != nil {
+					i.env.Errorf("Failed to rollback partial batch: %v", rollbackErr)
+				}
+			}
+			return nil, nil, fmt.Errorf("failed to get message from queue: %w", err)
+		}
+
+		// Create message with data and metadata
+		msg := ctx.NewMessage()
+
+		// Copy the data to avoid reuse issues
+		msgData := make([]byte, datalen)
+		copy(msgData, buffer[:datalen])
+		msg.SetRaw(msgData)
+
+		msg.SetMetadata("mq_queue", i.cfg.QueueName)
+		msg.SetMetadata("mq_message_id", string(mqmd.MsgId))
+		msg.SetMetadata("mq_correlation_id", string(mqmd.CorrelId))
+		msg.SetMetadata("mq_format", mqmd.Format)
+		msg.SetMetadata("mq_priority", fmt.Sprintf("%d", mqmd.Priority))
+		msg.SetMetadata("mq_persistence", fmt.Sprintf("%d", mqmd.Persistence))
+
+		messages = append(messages, msg)
+	}
+
+	// Create batch with all collected messages
+	batch := ctx.NewBatch(messages...)
+
+	// Acknowledgment function handles commit/rollback for entire batch
 	ackFn := func(ackCtx context.Context, ackErr error) error {
 		i.mqLock.Lock()
 		defer i.mqLock.Unlock()

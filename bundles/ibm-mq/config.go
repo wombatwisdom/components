@@ -63,6 +63,15 @@ type InputConfig struct {
 
 	// The IBM MQ queue name to read messages from
 	QueueName string `json:"queue_name" yaml:"queue_name"`
+
+	// The number of messages to fetch in a single batch
+	// Default: 1
+	BatchSize int `json:"batch_size" yaml:"batch_size"`
+
+	// Maximum time to wait for a complete batch before returning partial batch
+	// Format: duration string (e.g., "100ms", "1s", "500ms")
+	// Default: "5s"
+	BatchWaitTime string `json:"batch_wait_time" yaml:"batch_wait_time"`
 }
 
 // OutputConfig defines configuration for IBM MQ output

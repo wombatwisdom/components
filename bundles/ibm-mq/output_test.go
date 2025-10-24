@@ -3,6 +3,9 @@
 package ibm_mq_test
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/ibm-messaging/mq-golang/v5/ibmmq"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -46,6 +49,7 @@ var _ = Describe("Output", func() {
 
 	When("sending a message using the output", func() {
 		It("should put the message on the queue", func() {
+			// Clear queue before test
 			msg := spec.NewBytesMessage([]byte("hello, world"))
 			b, err := msg.Raw()
 			Expect(err).ToNot(HaveOccurred())
@@ -710,6 +714,385 @@ var _ = Describe("Output", func() {
 
 			_ = tlsOutput.Init(ctx)
 
+		})
+	})
+
+	Context("when using batch writes", func() {
+		It("should write multiple messages in a single batch", func() {
+			// Clear queue before test
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueExpr: queueName,
+			}
+			batchOutput, _ := ibm_mq.NewOutput(env, cfg)
+
+			err = batchOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer batchOutput.Close(ctx)
+
+			// Create a batch with multiple messages
+			messages := []spec.Message{
+				spec.NewBytesMessage([]byte("batch message 1")),
+				spec.NewBytesMessage([]byte("batch message 2")),
+				spec.NewBytesMessage([]byte("batch message 3")),
+			}
+			batch := ctx.NewBatch(messages...)
+
+			// Write the batch
+			err = batchOutput.Write(ctx, batch)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify messages were written
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_INPUT_AS_Q_DEF
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			// Read back messages to verify
+			gmo := ibmmq.NewMQGMO()
+			gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT
+			buffer := make([]byte, 1024)
+
+			for i := 0; i < 3; i++ {
+				datalen, err := qObj.Get(ibmmq.NewMQMD(), gmo, buffer)
+				Expect(err).ToNot(HaveOccurred())
+				expectedMsg := fmt.Sprintf("batch message %d", i+1)
+				Expect(string(buffer[:datalen])).To(Equal(expectedMsg))
+			}
+		})
+
+		It("should handle batch with different message metadata", func() {
+			// Clear queue before test
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueExpr: queueName,
+			}
+			batchOutput, _ := ibm_mq.NewOutput(env, cfg)
+
+			err = batchOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer batchOutput.Close(ctx)
+
+			// Create messages with different metadata
+			msg1 := spec.NewBytesMessage([]byte("high priority message"))
+			msg1.SetMetadata("mq_priority", "9")
+
+			msg2 := spec.NewBytesMessage([]byte("normal priority message"))
+			msg2.SetMetadata("mq_priority", "5")
+
+			msg3 := spec.NewBytesMessage([]byte("low priority message"))
+			msg3.SetMetadata("mq_priority", "1")
+
+			batch := ctx.NewBatch(msg1, msg2, msg3)
+
+			// Write the batch
+			err = batchOutput.Write(ctx, batch)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify messages with correct priorities
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_INPUT_AS_Q_DEF | ibmmq.MQOO_BROWSE
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			// Browse messages (don't consume) to check priorities
+			expectedPriorities := []int32{9, 5, 1}
+			gmo := ibmmq.NewMQGMO()
+			gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT | ibmmq.MQGMO_BROWSE_FIRST
+			buffer := make([]byte, 1024)
+
+			for i, expectedPri := range expectedPriorities {
+				mqmd := ibmmq.NewMQMD()
+				_, err := qObj.Get(mqmd, gmo, buffer)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(mqmd.Priority).To(Equal(expectedPri), fmt.Sprintf("Message %d should have priority %d", i+1, expectedPri))
+				gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT | ibmmq.MQGMO_BROWSE_NEXT
+			}
+
+			// Now consume the messages to clean up the queue
+			gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT
+			for i := 0; i < 3; i++ {
+				_, _ = qObj.Get(ibmmq.NewMQMD(), gmo, buffer)
+			}
+		})
+
+		It("should write large batches efficiently", func() {
+
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueExpr: queueName,
+			}
+			batchOutput, _ := ibm_mq.NewOutput(env, cfg)
+
+			err = batchOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer batchOutput.Close(ctx)
+
+			// Create a large batch
+			var messages []spec.Message
+			for i := 0; i < 100; i++ {
+				msg := spec.NewBytesMessage([]byte(fmt.Sprintf("large batch msg %d", i)))
+				messages = append(messages, msg)
+			}
+			batch := ctx.NewBatch(messages...)
+
+			// Time the batch write
+			start := time.Now()
+			err = batchOutput.Write(ctx, batch)
+			duration := time.Since(start)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(duration).To(BeNumerically("<", 10*time.Second), "Large batch write should be efficient")
+
+			// Verify all messages were written
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			// Check queue depth
+			openOptions := ibmmq.MQOO_INQUIRE
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			depth := getQueueDepth(qObj)
+			Expect(depth).To(BeNumerically(">=", 100), "All 100 messages should be in queue")
+
+			// Clean up: consume all 100 messages to prevent test bleed
+			qObj.Close(ibmmq.MQCO_NONE)
+
+			// Reopen for input to consume messages
+			openOptions = ibmmq.MQOO_INPUT_AS_Q_DEF
+			qObj, err = qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			gmo := ibmmq.NewMQGMO()
+			gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT
+			buffer := make([]byte, 1024)
+
+			for i := 0; i < 100; i++ {
+				_, err := qObj.Get(ibmmq.NewMQMD(), gmo, buffer)
+				if err != nil {
+					break // Stop if no more messages
+				}
+			}
+		})
+
+		It("should handle empty batches gracefully", func() {
+
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueExpr: queueName,
+			}
+			batchOutput, _ := ibm_mq.NewOutput(env, cfg)
+
+			err = batchOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer batchOutput.Close(ctx)
+
+			// Create empty batch
+			batch := ctx.NewBatch()
+
+			// Write empty batch should succeed without errors
+			err = batchOutput.Write(ctx, batch)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should handle batch with single message (default)", func() {
+			// Clear queue before test
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueExpr: queueName,
+			}
+			batchOutput, _ := ibm_mq.NewOutput(env, cfg)
+
+			err = batchOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer batchOutput.Close(ctx)
+
+			// Create batch with single message
+			msg := spec.NewBytesMessage([]byte("single message in batch"))
+			batch := ctx.NewBatch(msg)
+
+			// Write single message batch
+			err = batchOutput.Write(ctx, batch)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify message was written
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_INPUT_AS_Q_DEF
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			gmo := ibmmq.NewMQGMO()
+			gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT
+			buffer := make([]byte, 1024)
+
+			datalen, err := qObj.Get(ibmmq.NewMQMD(), gmo, buffer)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(buffer[:datalen])).To(Equal("single message in batch"))
+		})
+
+		It("should maintain message order in batch", func() {
+			// Clear queue before test
+			queueName, err := spec.NewExprLangExpression("${!\"DEV.QUEUE.1\"}")
+			Expect(err).ToNot(HaveOccurred())
+
+			cfg := ibm_mq.OutputConfig{
+				CommonMQConfig: ibm_mq.CommonMQConfig{
+					QueueManagerName: "QM1",
+					ConnectionName:   "",
+					UserId:           "app",
+					Password:         "passw0rd", // #nosec G101 - testcontainer default credential
+				},
+				QueueExpr: queueName,
+			}
+			batchOutput, _ := ibm_mq.NewOutput(env, cfg)
+
+			err = batchOutput.Init(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			defer batchOutput.Close(ctx)
+
+			// Create ordered messages
+			var messages []spec.Message
+			for i := 0; i < 10; i++ {
+				msg := spec.NewBytesMessage([]byte(fmt.Sprintf("ordered message %02d", i)))
+				messages = append(messages, msg)
+			}
+			batch := ctx.NewBatch(messages...)
+
+			// Write the batch
+			err = batchOutput.Write(ctx, batch)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Read back and verify order
+			cno := ibmmq.NewMQCNO()
+			csp := ibmmq.NewMQCSP()
+			csp.AuthenticationType = ibmmq.MQCSP_AUTH_USER_ID_AND_PWD
+			csp.UserId = "app"
+			csp.Password = "passw0rd" // #nosec G101 - testcontainer default credential
+			cno.SecurityParms = csp
+
+			qMgr, err := ibmmq.Connx("QM1", cno)
+			Expect(err).ToNot(HaveOccurred())
+			defer qMgr.Disc()
+
+			mqod := ibmmq.NewMQOD()
+			mqod.ObjectType = ibmmq.MQOT_Q
+			mqod.ObjectName = "DEV.QUEUE.1"
+			openOptions := ibmmq.MQOO_INPUT_AS_Q_DEF
+
+			qObj, err := qMgr.Open(mqod, openOptions)
+			Expect(err).ToNot(HaveOccurred())
+			defer qObj.Close(ibmmq.MQCO_NONE)
+
+			gmo := ibmmq.NewMQGMO()
+			gmo.Options = ibmmq.MQGMO_NO_SYNCPOINT
+			buffer := make([]byte, 1024)
+
+			for i := 0; i < 10; i++ {
+				datalen, err := qObj.Get(ibmmq.NewMQMD(), gmo, buffer)
+				Expect(err).ToNot(HaveOccurred())
+				expectedMsg := fmt.Sprintf("ordered message %02d", i)
+				Expect(string(buffer[:datalen])).To(Equal(expectedMsg), "Messages should maintain order")
+			}
 		})
 	})
 
