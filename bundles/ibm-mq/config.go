@@ -70,7 +70,7 @@ type InputConfig struct {
 
 	// Maximum time to wait for a complete batch before returning partial batch
 	// Format: duration string (e.g., "100ms", "1s", "500ms")
-	// Default: "5s"
+	// Default: "100ms"
 	BatchWaitTime string `json:"batch_wait_time" yaml:"batch_wait_time"`
 }
 

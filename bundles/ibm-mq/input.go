@@ -178,13 +178,13 @@ func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 		batchSize = 1
 	}
 
-	// Parse batch wait time, default to 5 seconds
-	waitInterval := int32(5000) // milliseconds
+	// Parse batch wait time, default to 100ms for collecting batch
+	var batchWaitDuration time.Duration = 100 * time.Millisecond
 	if i.cfg.BatchWaitTime != "" {
 		if duration, err := time.ParseDuration(i.cfg.BatchWaitTime); err == nil {
-			waitInterval = int32(duration.Milliseconds())
-			if waitInterval <= 0 {
-				waitInterval = 5000
+			batchWaitDuration = duration
+			if batchWaitDuration <= 0 {
+				batchWaitDuration = 100 * time.Millisecond
 			}
 		}
 	}
@@ -193,49 +193,74 @@ func (i *Input) Read(ctx spec.ComponentContext) (spec.Batch, spec.ProcessedCallb
 	var messages []spec.Message
 	buffer := make([]byte, 32768)
 
-	for j := 0; j < batchSize; j++ {
-		mqmd := ibmmq.NewMQMD()
-		gmo := ibmmq.NewMQGMO()
-		gmo.Options = ibmmq.MQGMO_SYNCPOINT + ibmmq.MQGMO_CONVERT
+	// Try to get first message WITHOUT waiting (let Benthos handle retry/backoff)
+	mqmd := ibmmq.NewMQMD()
+	gmo := ibmmq.NewMQGMO()
+	gmo.Options = ibmmq.MQGMO_SYNCPOINT + ibmmq.MQGMO_CONVERT + ibmmq.MQGMO_NO_WAIT
 
-		// Only wait on first message, subsequent messages should be available immediately
-		if j == 0 {
-			gmo.Options |= ibmmq.MQGMO_WAIT
-			gmo.WaitInterval = waitInterval
-		} else {
-			// For subsequent messages, don't wait - return partial batch if no more messages
-			gmo.Options |= ibmmq.MQGMO_NO_WAIT
+	datalen, err := i.qObject.Get(mqmd, gmo, buffer)
+	if err != nil {
+		var mqret *ibmmq.MQReturn
+		if errors.As(err, &mqret) {
+			if mqret.MQRC == ibmmq.MQRC_NO_MSG_AVAILABLE {
+				// No messages available - let Benthos handle backoff
+				return nil, nil, spec.ErrNoData
+			}
+		}
+		return nil, nil, fmt.Errorf("failed to get first message from queue: %w", err)
+	}
+
+	// Got first message! Create and add it
+	msg := ctx.NewMessage()
+	msgData := make([]byte, datalen)
+	copy(msgData, buffer[:datalen])
+	msg.SetRaw(msgData)
+	msg.SetMetadata("mq_queue", i.cfg.QueueName)
+	msg.SetMetadata("mq_message_id", string(mqmd.MsgId))
+	msg.SetMetadata("mq_correlation_id", string(mqmd.CorrelId))
+	msg.SetMetadata("mq_format", mqmd.Format)
+	msg.SetMetadata("mq_priority", fmt.Sprintf("%d", mqmd.Priority))
+	msg.SetMetadata("mq_persistence", fmt.Sprintf("%d", mqmd.Persistence))
+	messages = append(messages, msg)
+
+	// Now try to collect more messages within batch_wait_time
+	batchStartTime := time.Now()
+
+	for j := 1; j < batchSize; j++ {
+		// Calculate remaining time
+		remainingTime := time.Until(batchStartTime.Add(batchWaitDuration))
+		if remainingTime <= 0 {
+			// Time's up, return partial batch
+			break
 		}
 
-		datalen, err := i.qObject.Get(mqmd, gmo, buffer)
+		mqmd = ibmmq.NewMQMD()
+		gmo = ibmmq.NewMQGMO()
+		gmo.Options = ibmmq.MQGMO_SYNCPOINT + ibmmq.MQGMO_CONVERT + ibmmq.MQGMO_WAIT
+		gmo.WaitInterval = int32(remainingTime.Milliseconds())
+
+		datalen, err = i.qObject.Get(mqmd, gmo, buffer)
 
 		if err != nil {
 			var mqret *ibmmq.MQReturn
 			if errors.As(err, &mqret) {
 				if mqret.MQRC == ibmmq.MQRC_NO_MSG_AVAILABLE {
-					// If this is the first message and no messages available, return error
-					if j == 0 {
-						return nil, nil, spec.ErrNoData
-					}
-					// Otherwise return partial batch
+					// No more messages within timeout - return partial batch
 					break
 				}
 			}
 			// Any other error, rollback and return
-			if j > 0 {
-				// We have partial messages, need to rollback
-				if rollbackErr := i.qmgr.Back(); rollbackErr != nil {
-					i.env.Errorf("Failed to rollback partial batch: %v", rollbackErr)
-				}
+			if rollbackErr := i.qmgr.Back(); rollbackErr != nil {
+				i.env.Errorf("Failed to rollback partial batch: %v", rollbackErr)
 			}
 			return nil, nil, fmt.Errorf("failed to get message from queue: %w", err)
 		}
 
 		// Create message with data and metadata
-		msg := ctx.NewMessage()
+		msg = ctx.NewMessage()
 
 		// Copy the data to avoid reuse issues
-		msgData := make([]byte, datalen)
+		msgData = make([]byte, datalen)
 		copy(msgData, buffer[:datalen])
 		msg.SetRaw(msgData)
 

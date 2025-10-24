@@ -39,7 +39,9 @@ type MetadataConfig struct {
 // InputConfig stub for non-mqclient builds
 type InputConfig struct {
 	CommonMQConfig
-	QueueName string
+	QueueName     string
+	BatchSize     int
+	BatchWaitTime string
 }
 
 // SystemConfig stub for non-mqclient builds
