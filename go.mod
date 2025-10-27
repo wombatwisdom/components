@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.6
 	github.com/aws/aws-sdk-go-v2/service/pipes v1.23.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.81.0
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.9
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.11
 
 	// MQTT dependencies
 	github.com/eclipse/paho.mqtt.golang v1.5.1
@@ -50,8 +50,8 @@ require (
 	github.com/aws/aws-sdk-go v1.44.256 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.11 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.32 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.10 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.11 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.11 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.4 // indirect
