@@ -34,7 +34,7 @@ require (
 	github.com/nats-io/nkeys v0.4.11
 
 	// Testing dependencies
-	github.com/onsi/ginkgo/v2 v2.26.0
+	github.com/onsi/ginkgo/v2 v2.27.1
 	github.com/onsi/gomega v1.38.2
 	github.com/testcontainers/testcontainers-go v0.39.0
 	golang.org/x/text v0.30.0
