@@ -102,6 +102,8 @@ func (m *Input) Init(ctx spec.ComponentContext) error {
 		return err
 	}
 
+	m.log.Infof("Connected to MQTT broker")
+
 	go func() {
 		for {
 			select {
