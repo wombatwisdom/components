@@ -30,8 +30,8 @@ github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 h1:bIqFDwgGXXN1Kpp99pDOdKMTTb5d
 github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3/go.mod h1:H5O/EsxDWyU+LP/V8i5sm8cxoZgc2fdNR9bxlOFrQTo=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.11 h1:bKgSxk1TW//00PGQqYmrq83c+2myGidEclp+t9pPqVI=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.11/go.mod h1:vrPYCQ6rFHL8jzQA8ppu3gWX18zxjLIDGTeqDxkBmSI=
-github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.6 h1:XbuKUrZAQv+xzcojdFbSx3umdZbgvxCGZXBbBrh1ZLc=
-github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.6/go.mod h1:gQrordPdQL/b0glsH4wPqRiFzynn9a0JOIQU/cQGfWw=
+github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.8 h1:Zy6NBqx/Z7/usxkP5+G3SVneK2fqvshAeJYdz5rv4pc=
+github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.8/go.mod h1:uv2iw50N9h9DL6kxg0CfkPoBFv1Vwdd8aLXRCp/Jvrg=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.2 h1:xtuxji5CS0JknaXoACOunXOYOQzgfTvGAc9s2QdCJA4=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.2/go.mod h1:zxwi0DIR0rcRcgdbl7E2MSOvxDyyXGBlScvBkARFaLQ=
 github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.2 h1:DGFpGybmutVsCuF6vSuLZ25Vh55E3VmsnJmFfjeBx4M=
