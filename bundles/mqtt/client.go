@@ -23,7 +23,7 @@ type CommonMQTTConfig struct {
 }
 
 func (c *CommonMQTTConfig) apply(opts *mqtt.ClientOptions) *mqtt.ClientOptions {
-	opts = opts.SetAutoReconnect(true).
+	opts = opts.SetAutoReconnect(false).
 		SetClientID(c.ClientId)
 
 	if c.ConnectTimeout != nil {
