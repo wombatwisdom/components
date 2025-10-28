@@ -109,11 +109,7 @@ func (m *Input) Init(ctx spec.ComponentContext) error {
 	}
 
 	go func() {
-		for {
-			select {
-			case <-ctx.Context().Done():
-				return
-			}
+		for range ctx.Context().Done() {
 		}
 	}()
 
