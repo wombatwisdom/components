@@ -70,7 +70,6 @@ func (m *Input) Init(ctx spec.ComponentContext) error {
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
 			client.Disconnect(0)
 			m.closeMsgChan()
-			m.client = nil
 			m.log.Errorf("Connection lost due to: %v\n", reason)
 		}).
 		SetOnConnectHandler(func(client mqtt.Client) {
@@ -112,7 +111,6 @@ func (m *Input) Init(ctx spec.ComponentContext) error {
 					if m.closeMsgChan() {
 						m.log.Errorf("Connection lost for unknown reasons.")
 					}
-					m.client = nil
 					return
 				}
 			case <-ctx.Context().Done():
