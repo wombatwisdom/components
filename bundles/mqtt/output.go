@@ -1,8 +1,10 @@
 package mqtt
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 
@@ -46,8 +48,17 @@ func (m *Output) Init(ctx spec.ComponentContext) error {
 
 	opts := NewClientOptions(m.config.CommonMQTTConfig).
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
-			client.Disconnect(0)
 			m.log.Errorf("Connection lost due to: %v", reason)
+		}).
+		SetOnConnectHandler(func(client mqtt.Client) {
+			m.log.Infof("Connected to MQTT broker")
+		}).
+		SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
+			m.log.Infof("Reconnecting to MQTT broker...")
+		}).
+		SetConnectionAttemptHandler(func(broker *url.URL, tlsCfg *tls.Config) *tls.Config {
+			m.log.Infof("Attempting to reconnect to MQTT broker at %s", broker)
+			return tlsCfg
 		}).
 		SetWriteTimeout(m.config.WriteTimeout)
 
@@ -112,19 +123,19 @@ func (m *Output) Write(ctx spec.ComponentContext, batch spec.Batch) error {
 
 		mtok := client.Publish(topicStr, m.config.QOS, m.config.Retained, mb)
 		mtok.Wait()
-		sendErr := mtok.Error()
-		if errors.Is(sendErr, mqtt.ErrNotConnected) {
-			m.connMut.RLock()
-			m.client = nil
-			m.connMut.RUnlock()
-			sendErr = spec.ErrNotConnected
-		}
 
+		sendErr := mtok.Error()
 		if sendErr == nil {
 			m.log.Infof("Message sent to topic %s", topicStr)
 		} else {
 			m.log.Errorf("Failed to send message to topic %s: %v", topicStr, sendErr)
-			errs = errors.Join(errs, sendErr)
+
+			if errors.Is(sendErr, mqtt.ErrNotConnected) {
+				errs = errors.Join(errs, spec.ErrNotConnected)
+			} else {
+				errs = errors.Join(errs, sendErr)
+			}
+
 			if m.config.FailBatchOnError {
 				break
 			} else {
