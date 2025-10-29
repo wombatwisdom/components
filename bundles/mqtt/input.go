@@ -2,13 +2,13 @@ package mqtt
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
-	"maps"
-	"sync"
-	"time"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/wombatwisdom/components/framework/spec"
+	"maps"
+	"net/url"
+	"sync"
 )
 
 type InputConfig struct {
@@ -68,11 +68,11 @@ func (m *Input) Init(ctx spec.ComponentContext) error {
 	opts := NewClientOptions(m.InputConfig.CommonMQTTConfig).
 		SetCleanSession(m.CleanSession).
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
-			client.Disconnect(0)
-			m.closeMsgChan()
 			m.log.Errorf("Connection lost due to: %v\n", reason)
 		}).
 		SetOnConnectHandler(func(client mqtt.Client) {
+			m.log.Infof("Connected to MQTT broker")
+
 			tok := client.SubscribeMultiple(m.Filters, func(_ mqtt.Client, msg mqtt.Message) {
 				msgMut.Lock()
 				defer msgMut.Unlock()
@@ -91,6 +91,13 @@ func (m *Input) Init(ctx spec.ComponentContext) error {
 				m.closeMsgChan()
 			}
 		}).
+		SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
+			m.log.Infof("Reconnecting to MQTT broker...")
+		}).
+		SetConnectionAttemptHandler(func(broker *url.URL, tlsCfg *tls.Config) *tls.Config {
+			m.log.Infof("Attempting to reconnect to MQTT broker at %s", broker)
+			return tlsCfg
+		}).
 		SetAutoAckDisabled(!m.EnableAutoAck)
 
 	client := mqtt.NewClient(opts)
@@ -102,19 +109,7 @@ func (m *Input) Init(ctx spec.ComponentContext) error {
 	}
 
 	go func() {
-		for {
-			select {
-			case <-time.After(time.Second):
-				if !client.IsConnected() {
-					if m.closeMsgChan() {
-						m.log.Errorf("Connection lost for unknown reasons.")
-					}
-
-					return
-				}
-			case <-ctx.Context().Done():
-				return
-			}
+		for range ctx.Context().Done() {
 		}
 	}()
 

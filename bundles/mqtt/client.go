@@ -11,8 +11,10 @@ type CommonMQTTConfig struct {
 	ClientId string   `json:"client_id" yaml:"client_id"`
 	Urls     []string `json:"urls" yaml:"urls"`
 
-	ConnectTimeout *time.Duration `json:"connect_timeout" yaml:"connect_timeout"`
-	KeepAlive      *time.Duration `json:"keepalive" yaml:"keepalive"`
+	ConnectTimeout       *time.Duration `json:"connect_timeout" yaml:"connect_timeout"`
+	ConnectRetry         bool           `json:"connect_retry" yaml:"connect_retry"`
+	ConnectRetryInterval time.Duration  `json:"connect_retry_interval" yaml:"connect_retry_interval"`
+	KeepAlive            *time.Duration `json:"keepalive" yaml:"keepalive"`
 
 	Username string `json:"username" yaml:"username"`
 	Password string `json:"password" yaml:"password"`
@@ -23,7 +25,10 @@ type CommonMQTTConfig struct {
 }
 
 func (c *CommonMQTTConfig) apply(opts *mqtt.ClientOptions) *mqtt.ClientOptions {
-	opts = opts.SetAutoReconnect(false).
+	opts = opts.SetAutoReconnect(true).
+		SetConnectRetry(c.ConnectRetry).
+		SetConnectRetryInterval(c.ConnectRetryInterval).
+		SetResumeSubs(true).
 		SetClientID(c.ClientId)
 
 	if c.ConnectTimeout != nil {
