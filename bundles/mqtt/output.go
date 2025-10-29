@@ -20,6 +20,7 @@ type OutputConfig struct {
 	Retained         bool            `json:"retained" yaml:"retained"`
 	QOS              byte            `json:"qos" yaml:"qos"`
 	FailBatchOnError bool            `json:"fail_batch_on_error" yaml:"fail_batch_on_error"`
+	CleanSession     bool            `json:"clean_session" yaml:"clean_session"`
 }
 
 func NewOutput(env spec.Environment, config OutputConfig) (*Output, error) {
@@ -60,7 +61,8 @@ func (m *Output) Init(ctx spec.ComponentContext) error {
 			m.log.Infof("Attempting to reconnect to MQTT broker at %s", broker)
 			return tlsCfg
 		}).
-		SetWriteTimeout(m.config.WriteTimeout)
+		SetWriteTimeout(m.config.WriteTimeout).
+		SetCleanSession(m.config.CleanSession)
 
 	client := mqtt.NewClient(opts)
 
