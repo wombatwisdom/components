@@ -275,19 +275,22 @@ var _ = Describe("Input ACK behavior", func() {
 			err = input.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
-			// Should NOT receive the message again as it was auto-ACKed
-			readDone := make(chan bool)
-			go func() {
-				_, _, _ = input.Read(ctx)
-				readDone <- true
-			}()
+			waitForSubscription(input)
 
-			select {
-			case <-readDone:
-				Fail("Should not receive any message - it should have been auto-ACKed")
-			case <-time.After(1 * time.Second):
-				// Success - no message redelivered
-			}
+			// If we can successfully publish a new message and read it,
+			// it proves the auto-ACK worked, otherwise we'd get the old message
+			newMsg := []byte("test-verification")
+			pubToken = publisher.Publish("ack-test/auto", 1, false, newMsg)
+			pubToken.Wait()
+			Expect(pubToken.Error()).ToNot(HaveOccurred())
+
+			// Read the new message
+			batch, _, err := input.Read(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			msgs := maps.Collect(batch.Messages())
+			Expect(msgs).To(HaveLen(1))
+			raw, _ := msgs[0].Raw()
+			Expect(raw).To(Equal(newMsg)) // Should be the NEW message, not the old auto-ACKed one
 		})
 	})
 
