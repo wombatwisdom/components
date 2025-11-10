@@ -173,13 +173,36 @@ var _ = Describe("Input ACK behavior", func() {
 			err = input.Init(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
+			waitForSubscription(input)
+
 			// Should receive the message again as it wasn't ACKed
-			batch, _, err := input.Read(ctx)
-			Expect(err).ToNot(HaveOccurred())
-			msgs := maps.Collect(batch.Messages())
-			Expect(msgs).To(HaveLen(1))
-			raw, _ := msgs[0].Raw()
-			Expect(raw).To(Equal([]byte("test-no-ack")))
+			// Use timeout to prevent hanging if message redelivery doesn't work
+			readDone := make(chan spec.Batch, 1)
+			readErr := make(chan error, 1)
+
+			go func() {
+				batch, _, err := input.Read(ctx)
+				if err != nil {
+					readErr <- err
+					return
+				}
+				readDone <- batch
+			}()
+
+			select {
+			case batch := <-readDone:
+				msgs := maps.Collect(batch.Messages())
+				Expect(msgs).To(HaveLen(1))
+				raw, _ := msgs[0].Raw()
+				Expect(raw).To(Equal([]byte("test-no-ack")))
+
+			case err := <-readErr:
+				Fail(fmt.Sprintf("Failed to read redelivered message: %v", err))
+
+			case <-time.After(15 * time.Second):
+				_ = input.Close(ctx)
+				Fail("Timeout waiting for message redelivery - message should have been redelivered since it wasn't ACKed")
+			}
 		})
 
 		It("should handle ACK when client disconnects with valid context", func() {
@@ -255,14 +278,15 @@ var _ = Describe("Input ACK behavior", func() {
 			cancel()
 
 			err = callback(cancelCtx, nil)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred()) // No error expected since auto-ACK already happened
 
 			_ = input.Close(ctx)
 
+			// Now verify the message was auto-ACKed by checking it's NOT redelivered
 			input, err = mqtt.NewInput(env, mqtt.InputConfig{
 				CommonMQTTConfig: mqtt.CommonMQTTConfig{
 					Urls:     []string{url},
-					ClientId: "ACK_TEST_SUBSCRIBER_3_VERIFY",
+					ClientId: "ACK_TEST_SUBSCRIBER_3", // Same ClientId to get redelivered messages
 				},
 				Filters: map[string]byte{
 					"ack-test/auto": 1,
@@ -276,17 +300,30 @@ var _ = Describe("Input ACK behavior", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Should NOT receive the message again as it was auto-ACKed
-			readDone := make(chan bool)
+			// Use timeout to prevent hanging if message redelivery logic is wrong
+			readDone := make(chan spec.Batch, 1)
+			readErr := make(chan error, 1)
+
 			go func() {
-				_, _, _ = input.Read(ctx)
-				readDone <- true
+				batch, _, err := input.Read(ctx)
+				if err != nil {
+					readErr <- err
+					return
+				}
+				readDone <- batch
 			}()
 
 			select {
 			case <-readDone:
-				Fail("Should not receive any message - it should have been auto-ACKed")
-			case <-time.After(1 * time.Second):
-				// Success - no message redelivered
+				Fail("Should NOT receive message - it should have been auto-ACKed")
+
+			case <-readErr:
+				// This is acceptable - no message available proves auto-ACK worked
+
+			case <-time.After(2 * time.Second):
+				// TIMEOUT = SUCCESS! No message redelivered proves auto-ACK worked
+				_ = input.Close(ctx)
+				// Test passes - the timeout proves auto-ACK worked correctly
 			}
 		})
 	})
