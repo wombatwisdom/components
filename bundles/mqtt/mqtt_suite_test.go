@@ -2,10 +2,13 @@ package mqtt_test
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	mochi "github.com/mochi-mqtt/server/v2"
 	"github.com/mochi-mqtt/server/v2/hooks/auth"
+	"github.com/mochi-mqtt/server/v2/hooks/storage/badger"
 	"github.com/mochi-mqtt/server/v2/listeners"
 	"github.com/wombatwisdom/components/framework/spec"
 	"github.com/wombatwisdom/components/framework/test"
@@ -17,6 +20,7 @@ import (
 var url string
 var env spec.Environment
 var server *mochi.Server
+var tempDir string
 
 func TestMqtt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -27,6 +31,12 @@ func TestMqtt(t *testing.T) {
 		server = mochi.New(nil)
 		// Allow all connections.
 		_ = server.AddHook(new(auth.AllowHook), nil)
+
+		// Add persistence for reliable QoS 1 message redelivery
+		tempDir, err = os.MkdirTemp("", "mqtt-test-*")
+		Expect(err).ToNot(HaveOccurred())
+		dbPath := filepath.Join(tempDir, "mqtt.db")
+		_ = server.AddHook(new(badger.Hook), &badger.Options{Path: dbPath})
 
 		// generate a random port
 		port, err := test.RandomPort()
@@ -53,6 +63,9 @@ func TestMqtt(t *testing.T) {
 	AfterSuite(func() {
 		if server != nil {
 			_ = server.Close()
+		}
+		if tempDir != "" {
+			_ = os.RemoveAll(tempDir)
 		}
 	})
 
