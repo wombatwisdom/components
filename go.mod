@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	// AWS dependencies
 	github.com/aws/aws-sdk-go-v2 v1.39.6
-	github.com/aws/aws-sdk-go-v2/config v1.31.15
+	github.com/aws/aws-sdk-go-v2/config v1.31.17
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.21
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.8
 	github.com/aws/aws-sdk-go-v2/service/pipes v1.23.7
