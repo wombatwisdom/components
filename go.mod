@@ -7,9 +7,9 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.39.6
 	github.com/aws/aws-sdk-go-v2/config v1.31.17
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.21
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.90.0
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.10
 	github.com/aws/aws-sdk-go-v2/service/pipes v1.23.9
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.90.0
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.13
 
 	// MQTT dependencies
@@ -23,7 +23,7 @@ require (
 	github.com/google/uuid v1.6.0
 
 	// IBM MQ dependencies
-	github.com/ibm-messaging/mq-golang/v5 v5.6.5
+	github.com/ibm-messaging/mq-golang/v5 v5.6.7
 	github.com/johannesboyne/gofakes3 v0.0.0-20250106100439-5c39aecd6999
 	github.com/mochi-mqtt/server/v2 v2.7.9
 
