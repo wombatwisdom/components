@@ -44,7 +44,7 @@ jobs:
         go-version: 1.25.1
 
     - name: Cache Go modules
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/go-build
@@ -55,7 +55,7 @@ jobs:
 
     - name: Cache IBM MQ Client
       id: cache-mq
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ runner.temp }}/mqclient
         key: ${{ runner.os }}-ibm-mq-9.4.1.0
