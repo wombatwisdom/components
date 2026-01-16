@@ -29,7 +29,7 @@ tasks:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
       - go install golang.org/x/tools/cmd/goimports@latest
       - go install github.com/atombender/go-jsonschema@84c8d2b98bf0373873df8a353b122530a7110c70
-      - go install github.com/goreleaser/goreleaser/v2@latest
+      - go install github.com/goreleaser/goreleaser/v2@v2.12.7
 
   # Code Quality
   check:
