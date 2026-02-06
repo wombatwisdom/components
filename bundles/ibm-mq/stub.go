@@ -17,6 +17,7 @@ type CommonMQConfig struct {
 	UserId           string
 	Password         string
 	ApplicationName  string
+	TLS              *TLSConfig
 }
 
 // OutputConfig stub for non-mqclient builds
@@ -47,7 +48,6 @@ type InputConfig struct {
 // SystemConfig stub for non-mqclient builds
 type SystemConfig struct {
 	CommonMQConfig
-	TLS *TLSConfig
 }
 
 // TLSConfig stub for non-mqclient builds
